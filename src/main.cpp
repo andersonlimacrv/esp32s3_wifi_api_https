@@ -6,6 +6,8 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_http_client.h"
+#include <esp_event.h>
+#include <esp_system.h>
 
 #include "nvs_flash.h"
 
@@ -16,18 +18,10 @@
 
 #include "Credentials.h"
 
-static const char *TAG_WIFI = "WiFi CONNECTION";
-static const char *TAG_HTTP = "HTTP CLIENT";
 static const char *SETUP = "SETUP RUNNING";
-
-
-// Define CLIENT certificate  by command: openssl s_client -showcerts -connect actions-fastapi.onrender.com:443 
-// Error on render : E (4072) esp-tls: couldn't get hostname for :actions-fastapi.onrender.com: getaddrinfo() returns 202, addrinfo=0x0
 
 extern const uint8_t ClientCert_pem_start[] asm("_binary_src_certs_ClientCert_pem_start");
 extern const uint8_t ClientCert_pem_end[] asm("_binary_src_certs_ClientCert_pem_end"); 
-
-// openssl req -newkey rsa:2048 -nodes -keyout PrivateKey.pem -x509 -days 3650 -out Certificate.pem -subj "/CN=ESP32S3-CESS"
 extern const uint8_t Certificate_pem_start[] asm("_binary_src_certs_Certificate_pem_start");
 extern const uint8_t Certificate_pem_end[] asm("_binary_src_certs_Certificate_pem_end");
 extern const uint8_t PrivateKey_pem_start[] asm("_binary_src_certs_PrivateKey_pem_start");
@@ -38,33 +32,67 @@ typedef struct {
     const char * const products;
 } EndpointPaths;
 
-// Constantes para os paths
 static const EndpointPaths paths = {
     .users = "/users",
     .products = "/products",
 };
 
-// WiFi
+static EventGroupHandle_t wifi_event_group;
+const int WIFI_CONNECTED_BIT = BIT0;
+
+void print_ip_info_task(void *pvParameter)
+{
+    while (1)
+    {
+        // Espera até que o bit de conexão WiFi esteja setado
+        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
+
+        esp_netif_ip_info_t ip_info;
+        esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ip_info);
+        printf("WiFi got IP: " IPSTR "\n", IP2STR(&ip_info.ip));
+        printf("Subnet Mask: " IPSTR "\n", IP2STR(&ip_info.netmask));
+        printf("Gateway IP: " IPSTR "\n", IP2STR(&ip_info.gw));
+
+        // Remove o bit de conexão WiFi para não imprimir novamente
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+    }
+}
+
+void print_mac_address_task(void *pvParameter)
+{
+    uint8_t mac[6];
+    esp_wifi_get_mac(WIFI_IF_STA, mac);
+    printf("MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    vTaskDelete(NULL);
+}
+
 static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     switch (event_id)
     {
     case WIFI_EVENT_STA_START:
-        ESP_LOGI(TAG_WIFI, "WiFi connecting ...");
+        printf("WiFi CONECTING ... \n");
         break;
     case WIFI_EVENT_STA_CONNECTED:
-        ESP_LOGI(TAG_WIFI,"WiFi connected ...");
+        printf("WiFi CONNECTED. \n");
+        // Cria a task para imprimir o endereço MAC
+        xTaskCreate(&print_mac_address_task, "print_mac_address_task", 2048, NULL, 5, NULL);
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
-        ESP_LOGI(TAG_WIFI,"WiFi lost connection ...");
+        printf("WiFi LOST CONNECTION ! \n.");
+        // Remove o bit de conexão WiFi para que a task de IP não imprima enquanto desconectado
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         break;
     case IP_EVENT_STA_GOT_IP:
-        ESP_LOGI(TAG_WIFI,"WiFi got IP ...");
+        printf("WiFi getting IP...\n");
+        // Seta o bit de conexão WiFi
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
         break;
     default:
         break;
     }
 }
+
 void wifi_connection()
 {
     esp_netif_init();                     					
@@ -83,16 +111,14 @@ void wifi_connection()
     esp_wifi_set_config(WIFI_IF_STA, &wifi_configuration);
     esp_wifi_start();
     esp_wifi_connect();
-
 }
 
-// CLIENT
 esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
 {
     switch (evt->event_id)
     {
     case HTTP_EVENT_ON_DATA:
-        ESP_LOGI(TAG_HTTP, "HTTP_EVENT_ON_DATA: %.*s\n", evt->data_len, (char *)evt->data);
+        printf("HTTP_EVENT_ON_DATA: %.*s\n", evt->data_len, (char *)evt->data);
         break;
 
     default:
@@ -106,7 +132,7 @@ static void client_post_rest_function(const char *path)
     char url[strlen(BACKEND_URL) + strlen(path) + 1]; 
     strcpy(url, BACKEND_URL); 
     strcat(url, path);
-    ESP_LOGI(SETUP, "url: %s", url);
+    printf("SET ENDPOINT: %s \n", url);
     esp_http_client_config_t config_post = {};
     config_post.url = url;
     config_post.method = HTTP_METHOD_POST;
@@ -125,14 +151,18 @@ static void client_post_rest_function(const char *path)
 
 void setup() {
     nvs_flash_init();
+    wifi_event_group = xEventGroupCreate();
     wifi_connection();
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
     ESP_LOGI(SETUP,"WIFI was initiated ...........");
+
+    xTaskCreate(&print_ip_info_task, "print_ip_info_task", 2048, NULL, 5, NULL);
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     ESP_LOGI(SETUP, "Start client:");
     client_post_rest_function(paths.users);
+    
 }
 
 void loop() {}
