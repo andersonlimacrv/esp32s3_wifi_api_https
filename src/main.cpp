@@ -17,6 +17,7 @@
 #include "freertos/event_groups.h"
 
 #include "Credentials.h"
+#define USE_LOCAL_BACKEND
 
 static const char *SETUP = "SETUP RUNNING";
 
@@ -79,7 +80,7 @@ static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_b
         xTaskCreate(&print_mac_address_task, "print_mac_address_task", 2048, NULL, 5, NULL);
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
-        printf("WiFi LOST CONNECTION ! \n.");
+        printf("WiFi LOST CONNECTION [!] \n");
         // Remove o bit de conexão WiFi para que a task de IP não imprima enquanto desconectado
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         break;
@@ -128,17 +129,23 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
 }
 
 static void client_post_rest_function(const char *path)
-{   
+{
     char url[strlen(BACKEND_URL) + strlen(path) + 1]; 
     strcpy(url, BACKEND_URL); 
     strcat(url, path);
     printf("SET ENDPOINT: %s \n", url);
+
     esp_http_client_config_t config_post = {};
     config_post.url = url;
     config_post.method = HTTP_METHOD_POST;
-    config_post.cert_pem =  (const char *)Certificate_pem_start;
+    if (strncmp(url, "https", 5) == 0) {
+        printf("Using SSL\n");  
+        config_post.cert_pem = (const char *)Certificate_pem_start;
+    } else {
+        printf("Not using SSL\n");
+        config_post.cert_pem = NULL;
+    }
     config_post.event_handler = client_event_post_handler;
-        
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
 
     const char *post_data = "test ...";
@@ -148,6 +155,8 @@ static void client_post_rest_function(const char *path)
     esp_http_client_perform(client);
     esp_http_client_cleanup(client);
 }
+
+
 
 void setup() {
     nvs_flash_init();
