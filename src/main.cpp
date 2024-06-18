@@ -1,41 +1,25 @@
-#include <stdio.h>
-#include <string.h>
-#include <cstring>
+#include "includes.h"
 
-#include "esp_wifi.h"
-#include "esp_log.h"
-#include "esp_netif.h"
-#include "esp_http_client.h"
-#include <esp_event.h>
-#include <esp_system.h>
 
-#include "nvs_flash.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/timers.h"
-#include "freertos/event_groups.h"
-
-#include "Credentials.h"
 #define USE_LOCAL_BACKEND
 
 static const char *SETUP = "SETUP RUNNING";
 
 extern const uint8_t ClientCert_pem_start[] asm("_binary_src_certs_ClientCert_pem_start");
 extern const uint8_t ClientCert_pem_end[] asm("_binary_src_certs_ClientCert_pem_end"); 
-extern const uint8_t Certificate_pem_start[] asm("_binary_src_certs_Certificate_pem_start");
-extern const uint8_t Certificate_pem_end[] asm("_binary_src_certs_Certificate_pem_end");
-extern const uint8_t PrivateKey_pem_start[] asm("_binary_src_certs_PrivateKey_pem_start");
-extern const uint8_t PrivateKey_pem_end[] asm("_binary_src_certs_PrivateKey_pem_end");
+
+
+static const char * bearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZCI6ImMxNmI4NzgzLTcyZDItNDNhYy1hODM3LTRlYmQxOGM2NGJmMCIsInVuaXF1ZV9uYW1lIjoiU3VwZXIiLCJmYW1pbHlfbmFtZSI6IlVzZXIiLCJzdWIiOiJTR0VNX0lOSVRJQUxfU1VQRVJfVVNFUiIsInJvbGUiOiJTVVBFUl9VU0VSIiwianRpIjoiNmI1YTZmYjAtZGE0OC00YTk4LWI2NzAtOTJmMTQ4YTZlM2U5IiwiaWF0IjoxNzE4NjMzNzcxLCJHcnVwb0lkIjoiIiwiRW1wcmVzYUlkIjoiIiwiVW5pZGFkZUlkIjoiIiwibmJmIjoxNzE4NjMzNzcxLCJleHAiOjE3MTg3MjAxNzB9.INUOlFT01MyizmeFh893J-Fh4_RomxEdTzbZ20cYGcs";
+char header[512] = "bearer ";
 
 typedef struct {
-    const char * const users;
-    const char * const products;
+    const char * const login;
+    const char * const post_temperatura;
 } EndpointPaths;
 
 static const EndpointPaths paths = {
-    .users = "/users",
-    .products = "/products",
+    .login = "/api/auth/login",
+    .post_temperatura = "/api/leitura-ambiente",
 };
 
 static EventGroupHandle_t wifi_event_group;
@@ -45,17 +29,15 @@ void print_ip_info_task(void *pvParameter)
 {
     while (1)
     {
-        // Espera até que o bit de conexão WiFi esteja setado
-        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
-
+        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY); // Espera até que o bit de conexão WiFi esteja setado
         esp_netif_ip_info_t ip_info;
         esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ip_info);
+
         printf("WiFi got IP: " IPSTR "\n", IP2STR(&ip_info.ip));
         printf("Subnet Mask: " IPSTR "\n", IP2STR(&ip_info.netmask));
         printf("Gateway IP: " IPSTR "\n", IP2STR(&ip_info.gw));
-
-        // Remove o bit de conexão WiFi para não imprimir novamente
-        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);// Remove o bit de conexão WiFi para não imprimir novamente
     }
 }
 
@@ -119,7 +101,7 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
     switch (evt->event_id)
     {
     case HTTP_EVENT_ON_DATA:
-        printf("HTTP_EVENT_ON_DATA: %.*s\n", evt->data_len, (char *)evt->data);
+        printf("RESPONSE: %.*s\n", evt->data_len, (char *)evt->data);
         break;
 
     default:
@@ -138,9 +120,12 @@ static void client_post_rest_function(const char *path)
     esp_http_client_config_t config_post = {};
     config_post.url = url;
     config_post.method = HTTP_METHOD_POST;
+    config_post.timeout_ms = 9000;
+    config_post.buffer_size_tx = 2048;
+
     if (strncmp(url, "https", 5) == 0) {
         printf("Using SSL\n");  
-        config_post.cert_pem = (const char *)Certificate_pem_start;
+        config_post.cert_pem = (const char *)ClientCert_pem_start;
     } else {
         printf("Not using SSL\n");
         config_post.cert_pem = NULL;
@@ -148,8 +133,16 @@ static void client_post_rest_function(const char *path)
     config_post.event_handler = client_event_post_handler;
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
 
-    const char *post_data = "test ...";
+    const char *post_data = "{\n\"temperaturaAtual\":12,\n\"ambienteId\":1\n}";
+    printf("PAYLOAD:\n %s \n", post_data);
+
+
+    // Authentication: Bearer    
+    size_t headerSize = sizeof(header);
+    strlcat(header, bearerToken, headerSize);
+    printf("Authorization -> %s \n", header);
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
+    esp_http_client_set_header(client, "Authorization", header);
     esp_http_client_set_header(client, "Content-Type", "application/json");
 
     esp_http_client_perform(client);
@@ -170,7 +163,7 @@ void setup() {
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     ESP_LOGI(SETUP, "Start client:");
-    client_post_rest_function(paths.users);
+    client_post_rest_function(paths.post_temperatura);
     
 }
 
