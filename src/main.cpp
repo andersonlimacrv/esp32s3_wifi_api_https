@@ -88,8 +88,15 @@ void print_ip_info_task(void *pvParameter)
     }
 }
 
+void get_time_now(char *time_buffer, size_t buffer_size) {
+    time_t now;
+    time(&now);
+    struct tm *timeinfo = localtime(&now); 
+    strftime(time_buffer, buffer_size, "%Y-%m-%dT%H:%M:%S.000Z", timeinfo);
+}
+
 // Função chamada quando a hora é sincronizada
-void get_time_sync_cb(struct timeval *tv)
+void handler_time_sync_cb(struct timeval *tv)
 { 
     printf("Initializing handler for time sync notification\n");
     time_t now;
@@ -108,7 +115,7 @@ void ntp_time_sync_task(void *pvParameter)
 
     esp_sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
     esp_sntp_setservername(0, "pool.ntp.org");
-    esp_sntp_set_time_sync_notification_cb(&get_time_sync_cb);
+    esp_sntp_set_time_sync_notification_cb(&handler_time_sync_cb);
     esp_sntp_init();
 
     vTaskDelete(NULL);
@@ -163,7 +170,8 @@ static void client_post_rest_function(const char *path) // Função que envia o 
         strlcat(header, "bearer ", headerSize); 
         strlcat(header, bearerToken, headerSize);
         printf("Authorization -> %s \n", header);
-        
+
+        get_time_now(time_buffer, sizeof(time_buffer)); 
         temperaturaAtual = rand() % 21 + 10; // Gerando um valor randômico para temperatura entre 10 e 30 graus
 
         snprintf(payload, sizeof(payload), "{\"dataHora\": \"%s\",\"temperaturaAtual\": %d,\"ambienteId\": 1}", time_buffer, temperaturaAtual);
