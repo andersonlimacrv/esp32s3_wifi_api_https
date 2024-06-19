@@ -3,19 +3,57 @@
 #define USE_LOCAL_BACKEND
 char time_buffer[30];
 char header[512] = "bearer ";
-static const char *SETUP = "SETUP RUNNING";
+
 extern const uint8_t ClientCert_pem_start[] asm("_binary_src_certs_ClientCert_pem_start");
 extern const uint8_t ClientCert_pem_end[] asm("_binary_src_certs_ClientCert_pem_end"); 
-static const char *bearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZCI6ImI3NjBiYmUyLTgzYmUtNGNkNS1iYmFkLTRiM2JmNDBhYWUzMCIsInVuaXF1ZV9uYW1lIjoiSEFSRFdBUkUiLCJmYW1pbHlfbmFtZSI6IjEiLCJzdWIiOiJIQVJEV0FSRSIsInJvbGUiOiJBRE1JTiIsImp0aSI6IjFiMGZlM2QwLTFmODAtNDkyMS05YWE3LWE3MmM4MTBmMDRmYiIsImlhdCI6MTcxODc4NDgzMywiR3J1cG9JZCI6IjEiLCJFbXByZXNhSWQiOiIiLCJVbmlkYWRlSWQiOiIiLCJuYmYiOjE3MTg3ODQ4MzMsImV4cCI6MTcxODg3MTIzMn0.eInYv-xriVNvAKd_-XaP2wTVRC-mdtc1h1v5VWcQlFM";
+static const char *bearerToken = CREDENTIALS_TOKEN;
 typedef struct {
-    const char * const login;
-    const char * const post_temperatura;
+    const char * const post_login;
+    const char * const post_ambiente;
+    const char * const post_condensador;
+    const char * const post_bomba_condensador;
+    const char * const post_ventilador_condensador;
 } EndpointPaths;
 
 static const EndpointPaths paths = {
-    .login = "/api/auth/login",
-    .post_temperatura = "/api/leitura-ambiente",
+    .post_login = "/api/auth/login",
+    .post_ambiente = "/api/leitura-ambiente",
+    .post_condensador = "/api/leitura-condensador",
+    .post_bomba_condensador = "/api/leitura-bomba",
+    .post_ventilador_condensador = "/api/leitura-ventilador",
 };
+
+std::string format_payload_login(const std::string& userName, const std::string& password) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\"userName\": \"%s\",\"password\": \"%s\"}", userName.c_str(), password.c_str());
+    return std::string(json);
+}
+
+std::string format_payload_ambiente(const std::string& dataHora, int temperaturaAtual, int ambienteId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\"dataHora\": \"%s\",\"temperaturaAtual\": %d,\"ambienteId\": %d}", dataHora.c_str(), temperaturaAtual, ambienteId);
+    return std::string(json);
+}
+
+std::string format_payload_condensador(const std::string& dataHora, float temperaturaEntrada, float umidadeRelativaEntrada, float temperaturaSaida, float umidadeRelativaSaida, int velocidadeArEntrada, int condensadorId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\"dataHora\": \"%s\",\"temperaturaEntrada\": %.2f,\"umidadeRelativaEntrada\": %.2f,\"temperaturaSaida\": %.2f,\"umidadeRelativaSaida\": %.2f,\"velocidadeArEntrada\": %d,\"condensadorId\": %d}",
+             dataHora.c_str(), temperaturaEntrada, umidadeRelativaEntrada, temperaturaSaida, umidadeRelativaSaida, velocidadeArEntrada, condensadorId);
+    return std::string(json);
+}
+
+std::string format_payload_bomba_condensador(const std::string& dataHora,  float corrente, float frequencia, int bombaId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\"dataHora\": \"%s\",\"corrente\": %f,\"frequencia\": %f,\"bombaId\": %d}", dataHora.c_str(), corrente, frequencia, bombaId);
+    return std::string(json);
+}
+
+std::string format_payload_ventilador_condensador(const std::string& dataHora, float corrente, float frequencia, int ventiladorId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\"dataHora\": \"%s\",\"corrente\": %f,\"frequencia\": %f,\"ventiladorId\": %d}", dataHora.c_str(), corrente, frequencia, ventiladorId);
+    return std::string(json);
+}
+
 
 static EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED_BIT = BIT0;
@@ -135,8 +173,7 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt) // Handd
     return ESP_OK;
 }
 
-static void client_post_rest_function(const char *path) // Função que envia o POST para o servidor
-{
+static void client_post_rest_function(const char *path) {
     char url[strlen(BACKEND_URL) + strlen(path) + 1]; 
     strcpy(url, BACKEND_URL); 
     strcat(url, path);
@@ -159,12 +196,12 @@ static void client_post_rest_function(const char *path) // Função que envia o 
     config_post.event_handler = client_event_post_handler;
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
 
-    char payload[512];
-    int temperaturaAtual = 0; // Valor inicial da temperatura
+    int temperaturaAtual = 0;
+     // Valor inicial da temperatura
     srand(time(NULL));        // Inicializa a semente do gerador de números randômicos
 
     while (1) {
-        
+
         memset(header, 0, sizeof(header)); // Limpa o buffer header antes de adicionar um novo token
         size_t headerSize = sizeof(header);
         strlcat(header, "bearer ", headerSize); 
@@ -172,19 +209,21 @@ static void client_post_rest_function(const char *path) // Função que envia o 
         printf("Authorization -> %s \n", header);
 
         get_time_now(time_buffer, sizeof(time_buffer)); 
-        temperaturaAtual = rand() % 21 + 10; // Gerando um valor randômico para temperatura entre 10 e 30 graus
+        //temperaturaAtual = rand() % 21 + 10; // Gerando um valor randômico para temperatura entre 10 e 30 graus
+        //std::string payload = format_payload_ambiente(time_buffer, temperaturaAtual, 1);
+        // std::string payload = format_payload_login(CREDENTIALS_LOGIN_USERNAME, CREDENTIALS_LOGIN_PASSWORD); get payload login, works fine.
+        
 
-        snprintf(payload, sizeof(payload), "{\"dataHora\": \"%s\",\"temperaturaAtual\": %d,\"ambienteId\": 1}", time_buffer, temperaturaAtual);
-        printf("PAYLOAD:\n %s \n", payload);
+        printf("PAYLOAD:\n %s \n", payload.c_str());
 
-        esp_http_client_set_post_field(client, payload, strlen(payload));
+        esp_http_client_set_post_field(client, payload.c_str(), payload.length());
         esp_http_client_set_header(client, "Authorization", header);
         esp_http_client_set_header(client, "Content-Type", "application/json");
 
         esp_http_client_perform(client);
 
-        // Espera 30 segundos antes de enviar o próximo POST
-        vTaskDelay(30000 / portTICK_PERIOD_MS);
+        // Espera 5 segundos antes de enviar o próximo POST
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
     esp_http_client_cleanup(client);
 }
@@ -196,12 +235,13 @@ void setup() {
     wifi_connection();
 
     vTaskDelay(5000 / portTICK_PERIOD_MS);
-    ESP_LOGI(SETUP,"WIFI was initiated ...........");
+    ESP_LOGI("SETUP ->","WIFI was initiated ...........");
     xTaskCreate(&ntp_time_sync_task, "ntp_time_sync_task", 2048, NULL, 5, NULL);
     xTaskCreate(&print_ip_info_task, "print_ip_info_task", 2048, NULL, 5, NULL);
     
-    ESP_LOGI(SETUP, "Start client:");
-    client_post_rest_function(paths.post_temperatura);
+    ESP_LOGI("SETUP ->", "Start client:");
+    client_post_rest_function(paths.post_login);
+
 }
 
 void loop() {
