@@ -1,17 +1,12 @@
 #include "includes.h"
 
-
 #define USE_LOCAL_BACKEND
-
+char time_buffer[30];
+char header[512] = "bearer ";
 static const char *SETUP = "SETUP RUNNING";
-
 extern const uint8_t ClientCert_pem_start[] asm("_binary_src_certs_ClientCert_pem_start");
 extern const uint8_t ClientCert_pem_end[] asm("_binary_src_certs_ClientCert_pem_end"); 
-
-
-static const char * bearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZCI6ImMxNmI4NzgzLTcyZDItNDNhYy1hODM3LTRlYmQxOGM2NGJmMCIsInVuaXF1ZV9uYW1lIjoiU3VwZXIiLCJmYW1pbHlfbmFtZSI6IlVzZXIiLCJzdWIiOiJTR0VNX0lOSVRJQUxfU1VQRVJfVVNFUiIsInJvbGUiOiJTVVBFUl9VU0VSIiwianRpIjoiNmI1YTZmYjAtZGE0OC00YTk4LWI2NzAtOTJmMTQ4YTZlM2U5IiwiaWF0IjoxNzE4NjMzNzcxLCJHcnVwb0lkIjoiIiwiRW1wcmVzYUlkIjoiIiwiVW5pZGFkZUlkIjoiIiwibmJmIjoxNzE4NjMzNzcxLCJleHAiOjE3MTg3MjAxNzB9.INUOlFT01MyizmeFh893J-Fh4_RomxEdTzbZ20cYGcs";
-char header[512] = "bearer ";
-
+static const char *bearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZCI6ImI3NjBiYmUyLTgzYmUtNGNkNS1iYmFkLTRiM2JmNDBhYWUzMCIsInVuaXF1ZV9uYW1lIjoiSEFSRFdBUkUiLCJmYW1pbHlfbmFtZSI6IjEiLCJzdWIiOiJIQVJEV0FSRSIsInJvbGUiOiJBRE1JTiIsImp0aSI6IjFiMGZlM2QwLTFmODAtNDkyMS05YWE3LWE3MmM4MTBmMDRmYiIsImlhdCI6MTcxODc4NDgzMywiR3J1cG9JZCI6IjEiLCJFbXByZXNhSWQiOiIiLCJVbmlkYWRlSWQiOiIiLCJuYmYiOjE3MTg3ODQ4MzMsImV4cCI6MTcxODg3MTIzMn0.eInYv-xriVNvAKd_-XaP2wTVRC-mdtc1h1v5VWcQlFM";
 typedef struct {
     const char * const login;
     const char * const post_temperatura;
@@ -24,22 +19,6 @@ static const EndpointPaths paths = {
 
 static EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED_BIT = BIT0;
-
-void print_ip_info_task(void *pvParameter)
-{
-    while (1)
-    {
-        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY); // Espera até que o bit de conexão WiFi esteja setado
-        esp_netif_ip_info_t ip_info;
-        esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ip_info);
-
-        printf("WiFi got IP: " IPSTR "\n", IP2STR(&ip_info.ip));
-        printf("Subnet Mask: " IPSTR "\n", IP2STR(&ip_info.netmask));
-        printf("Gateway IP: " IPSTR "\n", IP2STR(&ip_info.gw));
-        
-        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);// Remove o bit de conexão WiFi para não imprimir novamente
-    }
-}
 
 void print_mac_address_task(void *pvParameter)
 {
@@ -58,18 +37,15 @@ static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_b
         break;
     case WIFI_EVENT_STA_CONNECTED:
         printf("WiFi CONNECTED. \n");
-        // Cria a task para imprimir o endereço MAC
-        xTaskCreate(&print_mac_address_task, "print_mac_address_task", 2048, NULL, 5, NULL);
+        xTaskCreate(&print_mac_address_task, "print_mac_address_task", 2048, NULL, 5, NULL);  
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
         printf("WiFi LOST CONNECTION [!] \n");
-        // Remove o bit de conexão WiFi para que a task de IP não imprima enquanto desconectado
-        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);  
         break;
     case IP_EVENT_STA_GOT_IP:
         printf("WiFi getting IP...\n");
-        // Seta o bit de conexão WiFi
-        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT); 
         break;
     default:
         break;
@@ -96,7 +72,49 @@ void wifi_connection()
     esp_wifi_connect();
 }
 
-esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
+void print_ip_info_task(void *pvParameter)
+{
+    while (1)
+    {
+        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
+        esp_netif_ip_info_t ip_info;
+        esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ip_info);
+
+        printf("WiFi got IP: " IPSTR "\n", IP2STR(&ip_info.ip));
+        printf("Subnet Mask: " IPSTR "\n", IP2STR(&ip_info.netmask));
+        printf("Gateway IP: " IPSTR "\n", IP2STR(&ip_info.gw));
+        
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+    }
+}
+
+// Função chamada quando a hora é sincronizada
+void get_time_sync_cb(struct timeval *tv)
+{ 
+    printf("Initializing handler for time sync notification\n");
+    time_t now;
+    time(&now);
+    struct tm *timeinfo = localtime(&now); 
+    strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%dT%H:%M:%S.000Z", timeinfo);
+    printf("Time Synced: %s\n", time_buffer);
+}
+
+// Tarefa que inicializa o SNTP e aguarda a sincronização do tempo
+void ntp_time_sync_task(void *pvParameter)
+{
+    printf("Initializing SNTP\n");
+    setenv("TZ", "UTC", 1);
+    tzset();
+
+    esp_sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
+    esp_sntp_setservername(0, "pool.ntp.org");
+    esp_sntp_set_time_sync_notification_cb(&get_time_sync_cb);
+    esp_sntp_init();
+
+    vTaskDelete(NULL);
+}
+
+esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt) // Handdler que recebe e imprime a resposta do servidor
 {
     switch (evt->event_id)
     {
@@ -110,12 +128,13 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
     return ESP_OK;
 }
 
-static void client_post_rest_function(const char *path)
+static void client_post_rest_function(const char *path) // Função que envia o POST para o servidor
 {
     char url[strlen(BACKEND_URL) + strlen(path) + 1]; 
     strcpy(url, BACKEND_URL); 
     strcat(url, path);
     printf("SET ENDPOINT: %s \n", url);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     esp_http_client_config_t config_post = {};
     config_post.url = url;
@@ -133,22 +152,34 @@ static void client_post_rest_function(const char *path)
     config_post.event_handler = client_event_post_handler;
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
 
-    const char *post_data = "{\n\"temperaturaAtual\":12,\n\"ambienteId\":1\n}";
-    printf("PAYLOAD:\n %s \n", post_data);
+    char payload[512];
+    int temperaturaAtual = 0; // Valor inicial da temperatura
+    srand(time(NULL));        // Inicializa a semente do gerador de números randômicos
 
+    while (1) {
+        
+        memset(header, 0, sizeof(header)); // Limpa o buffer header antes de adicionar um novo token
+        size_t headerSize = sizeof(header);
+        strlcat(header, "bearer ", headerSize); 
+        strlcat(header, bearerToken, headerSize);
+        printf("Authorization -> %s \n", header);
+        
+        temperaturaAtual = rand() % 21 + 10; // Gerando um valor randômico para temperatura entre 10 e 30 graus
 
-    // Authentication: Bearer    
-    size_t headerSize = sizeof(header);
-    strlcat(header, bearerToken, headerSize);
-    printf("Authorization -> %s \n", header);
-    esp_http_client_set_post_field(client, post_data, strlen(post_data));
-    esp_http_client_set_header(client, "Authorization", header);
-    esp_http_client_set_header(client, "Content-Type", "application/json");
+        snprintf(payload, sizeof(payload), "{\"dataHora\": \"%s\",\"temperaturaAtual\": %d,\"ambienteId\": 1}", time_buffer, temperaturaAtual);
+        printf("PAYLOAD:\n %s \n", payload);
 
-    esp_http_client_perform(client);
+        esp_http_client_set_post_field(client, payload, strlen(payload));
+        esp_http_client_set_header(client, "Authorization", header);
+        esp_http_client_set_header(client, "Content-Type", "application/json");
+
+        esp_http_client_perform(client);
+
+        // Espera 30 segundos antes de enviar o próximo POST
+        vTaskDelay(30000 / portTICK_PERIOD_MS);
+    }
     esp_http_client_cleanup(client);
 }
-
 
 
 void setup() {
@@ -158,13 +189,13 @@ void setup() {
 
     vTaskDelay(5000 / portTICK_PERIOD_MS);
     ESP_LOGI(SETUP,"WIFI was initiated ...........");
-
+    xTaskCreate(&ntp_time_sync_task, "ntp_time_sync_task", 2048, NULL, 5, NULL);
     xTaskCreate(&print_ip_info_task, "print_ip_info_task", 2048, NULL, 5, NULL);
-
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    
     ESP_LOGI(SETUP, "Start client:");
     client_post_rest_function(paths.post_temperatura);
-    
 }
 
-void loop() {}
+void loop() {
+    // não deverá conter nada no loop;
+}
