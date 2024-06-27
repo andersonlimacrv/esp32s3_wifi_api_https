@@ -17,20 +17,18 @@ struct send_payload {
 void setup() {
     Serial.begin(115200);
     esp_log_level_set("*", ESP_LOG_DEBUG);
-
     nvs_flash_init();
 
     wifi_event_group = xEventGroupCreate();
-    wifi_connection();  // Função que executa uma task que não é liberada até a conexão com a rede estiver estabelecida
-    xTaskCreate(&ntp_time_sync_task, "ntp_time_sync_task", 2048, NULL, 2, NULL);
-    xTaskCreate(&print_ip_info_task, "print_ip_info_task", 2048, NULL, 5, NULL);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    ESP_LOGI("SETUP ->", "Start client:");
-    xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    start_connection();  // Função que conecta wifi, sincroniza npm e loga na api, caso não 
 
-    // create a task to send mock data
-    xTaskCreate(post_condensador_mock_task, "post_condensador_mock_task", 8192, NULL, 1, NULL);
+    TickType_t interval_post = 2 * 60 * 1000 / portTICK_PERIOD_MS;  //  2 minutos 
+    TickType_t last_wake_time_post = xTaskGetTickCount(); // Calcula o tempo atual
+
+    for (;;) {
+        xTaskCreate(post_condensador_mock_task, "post_condensador_mock_task", 12948, NULL, 2, NULL);
+        vTaskDelayUntil(&last_wake_time_post, interval_post);
+    }
 }
 
 void loop() {

@@ -1,10 +1,12 @@
 #include "wifi_manager.h"
 /* 
-1. Inicializa a conexão Wi-Fi.
-2. Aguarda até que a conexão Wi-Fi seja estabelecida.
-3. Obtém e imprime o endereço MAC do dispositivo uma vez.
-4. Quando conectado, imprime as informações de IP uma vez.
-5. Gerencia eventos de conexão, desconexão e obtenção de IP. 
+1. Inicializa a conexão Wi-Fi;
+2. Aguarda até que a conexão Wi-Fi seja estabelecida;
+3. Obtém e imprime o endereço MAC do dispositivo uma vez;
+4. Quando conectado, imprime as informações de IP uma vez;
+5. Gerencia eventos de conexão, desconexão e obtenção de IP;
+6. Faz login na AP;
+7. Faz sincroniza NTP (Simple Network Time Protocol).
 */
 
 EventGroupHandle_t wifi_event_group;
@@ -23,12 +25,14 @@ void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
     switch (event_id)
     {
     case WIFI_EVENT_STA_START:
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         printf("WiFi CONNECTING.\n");
         esp_wifi_connect();
         break;
     case WIFI_EVENT_STA_CONNECTED:
         printf("WiFi CONNECTED.\n");
          xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+         xTaskCreate(print_mac_address_task, "print_mac_address_task", 2048, NULL, 2, NULL);
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
         printf("WiFi DISCONNECTED...\n");
@@ -37,14 +41,14 @@ void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
         break;
     case IP_EVENT_STA_GOT_IP:
         printf("WiFi got IP...\n");
-        xTaskCreate(&print_ip_info_task, "print_ip_info_task", 2048, NULL, 5, NULL);
+        xTaskCreate(print_ip_info_task, "print_ip_info_task", 2048, NULL, 1, NULL);
         break;
     default:
         break;
     }
 }
 
-void wifi_connection()
+void start_connection()
 {
     esp_netif_init();
     esp_event_loop_create_default();
@@ -68,6 +72,10 @@ void wifi_connection()
         if (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT)
         {
             printf("WiFi CONNECTED SUCCESSFULLY.\n");
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
+            xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
+            xTaskCreate(ntp_time_sync_task, "ntp_time_sync_task", 2048, NULL, 1, NULL);
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
             break;
         }
         printf("Retrying WiFi connection...\n");
