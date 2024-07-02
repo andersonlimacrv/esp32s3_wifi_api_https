@@ -13,12 +13,6 @@ std::string format_payload_ambiente(const std::string& dataHora, int temperatura
     return std::string(json);
 }
 
-std::string format_payload_bomba_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int bombaId) {
-    char json[512];
-    snprintf(json, sizeof(json), "{\n\"ligado\": %s,\n\"dataHora\": \"%s\",\n\"corrente\": %f,\n\"frequencia\": %d,\n\"bombaId\": %d\n}", dataHora.c_str(), corrente, frequencia, bombaId);
-    return std::string(json);
-}
-
 std::string format_payload_condensador(bool ligado, const std::string& dataHora, float temperaturaEntrada, float umidadeRelativaEntrada, float temperaturaSaida, float umidadeRelativaSaida, float velocidadeArEntrada, float corrente, int frequencia, int condensadorId) {
     char json[512];
     snprintf(json, sizeof(json), "{\n\"ligado\": %s,\n\"dataHora\": \"%s\",\n\"temperaturaEntrada\": %.2f,\n\"umidadeRelativaEntrada\": %.2f,\n\"temperaturaSaida\": %.2f,\n\"umidadeRelativaSaida\": %.2f,\n\"velocidadeArEntrada\": %f,\n\"corrente\": %f,\n\"frequencia\": %d,\n\"condensadorId\": %d\n}",
@@ -27,9 +21,19 @@ std::string format_payload_condensador(bool ligado, const std::string& dataHora,
     return std::string(json);
 }
 
-
-std::string format_payload_ventilador_condensador(const std::string& dataHora, float corrente, int frequencia, int ventiladorId) {
+std::string format_payload_bomba_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int bombaId) {
     char json[512];
-    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"corrente\": %f,\n\"frequencia\": %d,\n\"ventiladorId\": %d\n}", dataHora.c_str(), corrente, frequencia, ventiladorId);
+    snprintf(json, sizeof(json), "{\n\"ligado\": %s,\n\"dataHora\": \"%s\",\n\"corrente\": %f,\n\"frequencia\": %d,\n\"bombaId\": %d\n}", ligado ? "true" : "false", dataHora.c_str(), corrente, frequencia, bombaId);
     return std::string(json);
 }
+
+std::string format_payload_ventilador_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int ventiladorId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"corrente\": %f,\n\"frequencia\": %d,\n\"ventiladorId\": %d\n}", ligado ? "true" : "false", dataHora.c_str(), corrente, frequencia, ventiladorId);
+    return std::string(json);
+}
+
+
+
+
+
