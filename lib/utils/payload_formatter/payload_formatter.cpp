@@ -29,7 +29,7 @@ std::string format_payload_bomba_condensador(bool ligado, const std::string& dat
 
 std::string format_payload_ventilador_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int ventiladorId) {
     char json[512];
-    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"corrente\": %f,\n\"frequencia\": %d,\n\"ventiladorId\": %d\n}", ligado ? "true" : "false", ligado ? "true" : "false", dataHora.c_str(), corrente, frequencia, ventiladorId);
+    snprintf(json, sizeof(json), "{ \n\"ligado\": %s,\n\"dataHora\": \"%s\",\n\"corrente\": %f,\n\"frequencia\": %d,\n\"ventiladorId\": %d\n}", ligado ? "true" : "false", dataHora.c_str(), corrente, frequencia, ventiladorId);
     return std::string(json);
 }
 
