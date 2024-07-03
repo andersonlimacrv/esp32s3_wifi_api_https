@@ -168,3 +168,46 @@ void client_post_function(const char* payload, const char* post_path) {
     esp_http_client_perform(client);
     esp_http_client_cleanup(client);
 }
+
+
+void post_condensador_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_condensador);
+    vTaskDelete(NULL);
+}
+
+void post_bomba_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_bomba_condensador);
+    vTaskDelete(NULL);
+}
+
+void post_ventilador_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_ventilador_condensador);
+    vTaskDelete(NULL);
+}
+
+void post_ambiente_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_ambiente);
+    vTaskDelete(NULL);
+}
+
+void post_compressor_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_compressor);
+    vTaskDelete(NULL);
+}
+
+void post_regime_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_regime);
+    vTaskDelete(NULL);
+}
+
+void post_regime_condensacao_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_regime_condensacao);
+    vTaskDelete(NULL);
+}

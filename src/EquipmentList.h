@@ -6,9 +6,13 @@
 // Definition of a structure to store equipment IDs
 struct Equipment {
     int condensadorId;
+    int condensacaoId;
     std::vector<int> bombaIds;
     std::vector<int> ventiladorIds;
     std::vector<int> ambienteIds;
+    std::vector<int> compressorIds;
+    std::vector<int> regimeIds;
+
 };
 
 // Template function to ensure unique initialization

@@ -7,9 +7,9 @@ std::string format_payload_login(const std::string& userName, const std::string&
     return std::string(json);
 }
 
-std::string format_payload_ambiente(const std::string& dataHora, int temperaturaAtual, int ambienteId) {
+std::string format_payload_ambiente(const std::string& dataHora, float temperaturaAtual, int ambienteId) {
     char json[512];
-    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"temperaturaAtual\": %d,\n\"ambienteId\": %d\n}", dataHora.c_str(), temperaturaAtual, ambienteId);
+    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"temperaturaAtual\": %.f,\n\"ambienteId\": %d\n}", dataHora.c_str(), temperaturaAtual, ambienteId);
     return std::string(json);
 }
 
@@ -30,6 +30,20 @@ std::string format_payload_bomba_condensador(bool ligado, const std::string& dat
 std::string format_payload_ventilador_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int ventiladorId) {
     char json[512];
     snprintf(json, sizeof(json), "{ \n\"ligado\": %s,\n\"dataHora\": \"%s\",\n\"corrente\": %f,\n\"frequencia\": %d,\n\"ventiladorId\": %d\n}", ligado ? "true" : "false", dataHora.c_str(), corrente, frequencia, ventiladorId);
+    return std::string(json);
+}
+
+std::string format_payload_compressor(bool ligado, const std::string& dataHora, float pressaoSuccao, float pressaoDescarga, float pressaoOleoReservatorio, float pressaoOleoAposFiltro, float temperaturaSuccao, float temperaturaDescarga, float temperaturaOleo, float corrente, int horas, int frequencia, int slider, int compressorId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\n\"ligado\": %s,\n\"dataHora\": \"%s\", \n\"pressaoSuccao\": %f,\n\"pressaoDescarga\": %f,\n\"pressaoOleoReservatorio\": %f,\n\"pressaoOleoAposFiltro\": %f,\n\"temperaturaSuccao\": %f,\n\"temperaturaDescarga\": %f,\n\"temperaturaOleo\": %f,\n\"corrente\": %f,\n\"horas\": %d,\n\"frequencia\": %d,\n\"slide\": %d,\n\"compressorId\": %d\n}",
+             ligado ? "true" : "false",
+             dataHora.c_str(), pressaoSuccao, pressaoDescarga, pressaoOleoReservatorio, pressaoOleoAposFiltro, temperaturaSuccao, temperaturaDescarga, temperaturaOleo, corrente, horas, frequencia, slider, compressorId);
+    return std::string(json);
+}
+
+std::string format_payload_regime(const std::string& dataHora, float pressaoAtual, int regimeId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"pressaoAtual\": %f,\n\"regimeId\": %d\n}", dataHora.c_str(), pressaoAtual, regimeId);
     return std::string(json);
 }
 
