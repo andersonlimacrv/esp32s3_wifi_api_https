@@ -8,5 +8,5 @@ std::string format_payload_ambiente(const std::string& dataHora, int temperatura
 std::string format_payload_bomba_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int bombaId);
 std::string format_payload_condensador(bool ligado, const std::string& dataHora, float temperaturaEntrada, float umidadeRelativaEntrada, float temperaturaSaida, float umidadeRelativaSaida, float velocidadeArEntrada, float corrente, int frequencia, int condensadorId);
 std::string format_payload_ventilador_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int ventiladorId);
-
+std::string format_payload_compressor(bool ligado, const std::string& dataHora, float pressaoSuccao, float pressaoDescarga, float pressaoOleoReservatorio, float pressaoOleoAposFiltro, float temperaturaSuccao, float temperaturaDescarga, float temperaturaOleo );
 #endif

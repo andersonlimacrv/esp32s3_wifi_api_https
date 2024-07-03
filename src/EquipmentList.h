@@ -1,5 +1,5 @@
-#ifndef EQUIPMENT_H
-#define EQUIPMENT_H
+#ifndef EQUIPMENTLIST_H
+#define EQUIPMENTLIST_H
 
 #include <vector>
 
@@ -8,13 +8,7 @@ struct Equipment {
     int condensadorId;
     std::vector<int> bombaIds;
     std::vector<int> ventiladorIds;
-
-    Equipment() {
-        // Initialization of equipment IDs
-        condensadorId = 1;
-        bombaIds = {1, 2}; // Pump IDs
-        ventiladorIds = {1, 2}; // Fan IDs
-    }
+    std::vector<int> ambienteIds;
 };
 
 // Template function to ensure unique initialization
@@ -26,7 +20,7 @@ struct Singleton {
     }
 };
 
-// Definition of a global instance of the Equipment structure
-#define equipment Singleton<Equipment>::instance()
+// Declaration of a global instance of the Equipment structure
+extern Equipment& equipment;
 
-#endif // EQUIPMENT_H
+#endif // EQUIPMENTLIST_H

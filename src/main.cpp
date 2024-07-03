@@ -15,6 +15,7 @@ struct send_payload {
 
 
 void setup() {
+    initializeEquipmentIds();
     Serial.begin(115200);
     esp_log_level_set("*", ESP_LOG_DEBUG);
     nvs_flash_init();
@@ -28,6 +29,8 @@ void setup() {
     xTaskCreate(post_bombas_task, "post_bombas_task", 4096, NULL, 1, NULL);
     // Criar tarefa para postar dados dos ventiladores periodicamente
     xTaskCreate(post_ventiladores_task, "post_ventiladores_task", 4096, NULL, 1, NULL);
+
+    
 
 }
 

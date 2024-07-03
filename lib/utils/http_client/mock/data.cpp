@@ -3,7 +3,7 @@
 #include "../http_client.h"
 #include <random>
 #include <cstring>
-#include "../../../../src/Equipment.h" 
+#include "../../../../src/Credentials.h" 
 
 // Exemple of a POST request for the condensador
 void post_condensador_mock_task(void* pvParameters) {
