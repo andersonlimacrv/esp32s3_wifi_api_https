@@ -26,6 +26,9 @@ void setup() {
     xTaskCreate(post_condensador_task, "post_condensador_task", 4096, NULL, 1, NULL);
     // Criar tarefa para postar dados das bombas periodicamente
     xTaskCreate(post_bombas_task, "post_bombas_task", 4096, NULL, 1, NULL);
+    // Criar tarefa para postar dados dos ventiladores periodicamente
+    xTaskCreate(post_ventiladores_task, "post_ventiladores_task", 4096, NULL, 1, NULL);
+
 }
 
 void loop() {
