@@ -276,7 +276,6 @@ void post_regime_condensacao_mock_task(void* pvParameters) {
         char* payload_copy = new char[payload.size() + 1];
         std::strcpy(payload_copy, payload.c_str());
         xTaskCreate(post_regime_condensacao_task, "post_regime_condensacao_task", 8192, (void*)payload_copy, 1, NULL);
-        
         vTaskDelayUntil(&last_wake_time_post, interval_post);
     }
 }

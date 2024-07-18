@@ -1,6 +1,5 @@
 #include "include.h"
 
-
 void setup() {
     initializeEquipmentIds();
     Serial.begin(115200);
@@ -8,7 +7,7 @@ void setup() {
     nvs_flash_init();
 
     wifi_event_group = xEventGroupCreate();
-    start_connection();  // Função que conecta wifi, sincroniza npm e loga na api, caso não 
+    start_connection();  // Função que conecta wifi, sincroniza npm loga na api;
 
     // Criar tarefa para postar dados do condensador a cada 60 segundos
     xTaskCreate(post_condensador_mock_task, "post_condensador_mock_task", 8000, NULL, 1, NULL);
