@@ -3,7 +3,7 @@
 // Exemple of how to create a periodic task for Post the condensador data
 void post_condensador_mock_task(void* pvParameters) {
     TickType_t last_wake_time_post = xTaskGetTickCount();
-    const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
+    const TickType_t interval_post = pdMS_TO_TICKS(20000); // Post each 20 seconds
 
     for (;;) {
 
