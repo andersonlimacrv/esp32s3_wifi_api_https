@@ -5,6 +5,7 @@
 
 // Definition of a structure to store equipment IDs
 struct Equipment {
+    int unidadeId;
     int condensadorId;
     int condensacaoId;
     std::vector<int> bombaIds;

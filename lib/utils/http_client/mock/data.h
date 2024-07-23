@@ -15,6 +15,7 @@ void post_ambientes_mock_task(void* pvParameters);
 void post_compressores_mock_task(void* pvParameters);
 void post_regimes_mock_task(void* pvParameters);
 void post_regime_condensacao_mock_task(void* pvParameters);
+void post_energia_mock_task(void* pvParameters);
 
 
 #endif // DATA_H

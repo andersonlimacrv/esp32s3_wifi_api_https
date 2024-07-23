@@ -13,6 +13,7 @@ typedef struct {
     const char * const post_compressor;
     const char * const post_regime;
     const char * const post_regime_condensacao;
+    const char * const post_energia;
 } EndpointPaths;
 
 const EndpointPaths paths = {
@@ -23,7 +24,8 @@ const EndpointPaths paths = {
     .post_ventilador_condensador = "/api/leitura-ventilador",
     .post_compressor = "/api/leitura-compressor",
     .post_regime = "/api/leitura-regime",
-    .post_regime_condensacao = "/api/leitura-condensacao"
+    .post_regime_condensacao = "/api/leitura-condensacao",
+    .post_energia = "/api/leitura-energia"
 };
 
 extern const EndpointPaths paths;
@@ -40,5 +42,6 @@ void post_ambiente_task(void* pvParameters);
 void post_compressor_task(void* pvParameters);
 void post_regime_task(void* pvParameters);
 void post_regime_condensacao_task(void* pvParameters);
+void post_energia_task(void* pvParameters);
 
 #endif 

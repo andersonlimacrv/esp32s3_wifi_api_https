@@ -211,3 +211,10 @@ void post_regime_condensacao_task(void* pvParameters) {
     client_post_function(payload, paths.post_regime_condensacao);
     vTaskDelete(NULL);
 }
+
+
+void post_energia_task(void* pvParameters) {
+    const char* payload = (const char*)pvParameters;
+    client_post_function(payload, paths.post_energia);
+    vTaskDelete(NULL);
+}

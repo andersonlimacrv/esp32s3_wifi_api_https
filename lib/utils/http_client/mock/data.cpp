@@ -165,7 +165,7 @@ void post_compressores_mock_task(void* pvParameters) {
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
 
     for (;;) {
-        for (int compressaoId : equipment.compressorIds) {
+        for (int compressorId : equipment.compressorIds) {
         char time_buffer[64];
         get_time_now(time_buffer, sizeof(time_buffer));
 
@@ -212,7 +212,7 @@ void post_compressores_mock_task(void* pvParameters) {
             horas,
             frequencia,
             slide,
-            compressaoId);
+            compressorId);
         
         char* payload_copy = new char[payload.size() + 1];
         std::strcpy(payload_copy, payload.c_str());
@@ -279,5 +279,64 @@ void post_regime_condensacao_mock_task(void* pvParameters) {
         vTaskDelayUntil(&last_wake_time_post, interval_post);
     }
 }
+
+void post_energia_mock_task(void* pvParameters) {
+    TickType_t last_wake_time_post = xTaskGetTickCount();
+    const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
+
+    for (;;) {
+        char time_buffer[64];
+        get_time_now(time_buffer, sizeof(time_buffer));
+
+        std::hash<std::string> hasher;
+        size_t seed = hasher(time_buffer);
+
+
+        std::mt19937 gen(seed);
+        std::uniform_real_distribution<float> demandaAtiva_dist(30, 155);
+        std::uniform_real_distribution<float> demandaReativa_dist(30, 155);
+        std::uniform_real_distribution<float> fatorPotencia_dist(0, 1);
+        std::uniform_real_distribution<float> consumoAtivoTotal_dist(30, 155);
+        std::uniform_real_distribution<float> consumoReativoTotal_dist(30, 155);
+        std::uniform_real_distribution<float> consumoAtivoForaDePontaIndutivo_dist(30, 155);
+        std::uniform_real_distribution<float> consumoAtivoForaDePontaCapacitivo_dist(30, 155);
+        std::uniform_real_distribution<float> consumoAtivoPonta_dist(30, 155);
+
+        int periodoMedicao = 1; /* 0, 1 ou 2 */
+        bool ligado = true;
+
+        float demandaAtiva = demandaAtiva_dist(gen);
+        float demandaReativa = demandaReativa_dist(gen);
+        float fatorPotencia = fatorPotencia_dist(gen);
+        float consumoAtivoTotal = consumoAtivoTotal_dist(gen);
+        float consumoReativoTotal = consumoReativoTotal_dist(gen);
+        float consumoAtivoForaDePontaIndutivo = consumoAtivoForaDePontaIndutivo_dist(gen);
+        float consumoAtivoForaDePontaCapacitivo = consumoAtivoForaDePontaCapacitivo_dist(gen);
+        float consumoAtivoPonta = consumoAtivoPonta_dist(gen);
+        
+
+        std::string payload = format_payload_energia(
+            ligado,
+            time_buffer,
+            demandaAtiva,
+            demandaReativa,
+            fatorPotencia,
+            consumoAtivoTotal,
+            consumoReativoTotal,
+            consumoAtivoForaDePontaIndutivo,
+            consumoAtivoForaDePontaCapacitivo,
+            consumoAtivoPonta,
+            periodoMedicao,
+            equipment.unidadeId
+            );
+
+        char* payload_copy = new char[payload.length() + 1];
+        std::strcpy(payload_copy, payload.c_str());
+        xTaskCreate(post_energia_task, "post_energia_task", 8192, (void*)payload_copy, 1, NULL);
+        vTaskDelayUntil(&last_wake_time_post, interval_post);
+    }
+}
+
+
         
 

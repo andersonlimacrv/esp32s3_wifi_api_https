@@ -47,6 +47,13 @@ std::string format_payload_regime(const std::string& dataHora, float pressaoAtua
     return std::string(json);
 }
 
+std::string format_payload_energia(bool ligado, const std::string& dataHora, float demandaAtiva, float demandaReativa, float fatorPotencia, float consumoAtivoTotal, float consumoReativoTotal, float consumoAtivoForaDePontaIndutivo, float consumoAtivoForaDePontaCapacitivo, float consumoAtivoPonta, int periodoMedicao, int unidadeId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\n\"ligado\": %s,\n\"dataHora\": \"%s\", \n\"demandaAtiva\": %f,\n\"demandaReativa\": %f,\n\"fatorPotencia\": %f,\n\"consumoAtivoTotal\": %f,\n\"consumoReativoTotal\": %f,\n\"consumoAtivoForaDePontaIndutivo\": %f,\n\"consumoAtivoForaDePontaCapacitivo\": %f,\n\"consumoAtivoPonta\": %f,\n\"periodoMedicao\": %d,\n\"unidadeId\": %d\n}",
+             ligado ? "true" : "false",
+             dataHora.c_str(), demandaAtiva, demandaReativa, fatorPotencia, consumoAtivoTotal, consumoReativoTotal, consumoAtivoForaDePontaIndutivo, consumoAtivoForaDePontaCapacitivo, consumoAtivoPonta, periodoMedicao, unidadeId);
+    return std::string(json);
+}
 
 
 
