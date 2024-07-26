@@ -1,5 +1,5 @@
 #include "payload_formatter.h"
-#include <cstdio>
+
 
 std::string format_payload_login(const std::string& userName, const std::string& password) {
     char json[512];

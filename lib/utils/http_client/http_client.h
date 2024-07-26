@@ -1,8 +1,17 @@
 #ifndef HTTP_CLIENT_H
 #define HTTP_CLIENT_H
 
-#include <string>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+#include "cJSON.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_http_client.h"
+#include "../payload_formatter/payload_formatter.h"
+#include "../ntp_time_sync/ntp_time_sync.h"
+#include "../../../src/Credentials.h"
 
 typedef struct {
     const char * const post_login;

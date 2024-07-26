@@ -1,14 +1,4 @@
 #include "http_client.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "../payload_formatter/payload_formatter.h"
-#include "../ntp_time_sync/ntp_time_sync.h"
-#include "../../../src/Credentials.h"
-#include "cJSON.h"
 
 static const char *backend_url = CREDENTIALS_BACKEND_URL;
 extern const uint8_t ClientCert_pem_start[] asm("_binary_lib_utils_http_client_certs_ClientCert_pem_start");
