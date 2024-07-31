@@ -1,5 +1,3 @@
-// wifi_manager.h
-
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
@@ -14,12 +12,21 @@
 #include "../ntp_time_sync/ntp_time_sync.h"
 #include <string.h>
 
-extern EventGroupHandle_t wifi_event_group;
-extern const int WIFI_CONNECTED_BIT;
+class WiFiManager {
+public:
+    WiFiManager();
+    void startConnection(const char* ssid, const char* pass);
+    static void printIpInfoTask(void *pvParameter);
+    static void printMacAddressTask(void *pvParameter);
+    static void wifiEventHandler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 
-void start_connection();
-void print_ip_info_task(void *pvParameter);
-void print_mac_address_task(void *pvParameter);
-void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+private:
+    const char* ssid;
+    const char* pass;
+    EventGroupHandle_t wifi_event_group;
+    static const int WIFI_CONNECTED_BIT = BIT0; 
+    void initializeWiFi();
+    void connect();
+};
 
-#endif 
+#endif // WIFI_MANAGER_H

@@ -2,7 +2,7 @@
 
 Cliente HTTPS usando o ESP-IDF no mesmo ESP32, de forma paralela.
 
-##  Criando Certificados PEM para o Servidor
+## Criando Certificados PEM para o Servidor
 
 Para criar os certificados PEM para o lado do servidor, utilize o seguinte comando OpenSSL:
 
@@ -17,6 +17,7 @@ Utilize o comando a seguir para visualizar os certificados do site ao qual desej
 
 ```bash
 openssl s_client -showcerts -connect actions-fastapi.onrender.com:443
+openssl s_client -showcerts -connect sgemapi.cess.ind.br:443
 ```
 
 Copie os certificados exibidos e cole-os em um único arquivo ClientCert.pem para o cliente.

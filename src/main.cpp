@@ -6,17 +6,20 @@ void setup() {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     nvs_flash_init();
 
-    wifi_event_group = xEventGroupCreate();
-    start_connection();  // Função que conecta wifi, sincroniza npm loga na api;
+    WiFiManager wifiManager;
+    wifiManager.startConnection(CREDENTIALS_SSID, CREDENTIALS_PASSWORD);
 
     // Cria tarefa para postar dados do condensador a cada 60 segundos
-    //xTaskCreate(post_condensador_mock_task, "post_condensador_mock_task", 8000, NULL, 1, NULL);
+    xTaskCreate(post_condensador_mock_task, "post_condensador_mock_task", 8000, NULL, 1, NULL);
+    
     // Cria tarefa para postar dados das bombas periodicamente
     //xTaskCreate(post_bombas_condensador_mock_task, "post_bombas_condensador_mock_task", 8000, NULL, 1, NULL);
+    
     // Cria tarefa para postar dados dos ventiladores periodicamente
     //xTaskCreate(post_ventiladores_condensador_mock_task, "post_ventiladores_condensador_mock_task", 8000, NULL, 1, NULL);
+    
     // Cria tarefa para postar dados das ambientes periodicamente
-   //xTaskCreate(post_ambientes_mock_task, "post_ambientes_mock_task", 8000, NULL, 1, NULL);
+    //xTaskCreate(post_ambientes_mock_task, "post_ambientes_mock_task", 8000, NULL, 1, NULL);
 
     // Cria tarefa para postar dados dos compressores a cada 60 segundos
     //xTaskCreate(post_compressores_mock_task, "post_compressores_mock_task", 8000, NULL, 1, NULL);
@@ -28,7 +31,7 @@ void setup() {
     //xTaskCreate(post_regime_condensacao_mock_task, "post_regime_condensacao_mock_task", 8000, NULL, 1, NULL);
 
     // Cria tarefa para potar dados de Energia a cada 60 segundos
-    xTaskCreate(post_energia_mock_task, "post_energia_mock_task", 8000, NULL, 1, NULL);
+    //xTaskCreate(post_energia_mock_task, "post_energia_mock_task", 8000, NULL, 1, NULL);
 }
 
 void loop() {

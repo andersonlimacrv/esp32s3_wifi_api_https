@@ -99,6 +99,7 @@ void client_post_auth_login(void *param) {
     if (strncmp(url, "https", 5) == 0) {
         printf("Using SSL\n");  
         config_post.cert_pem = (const char *)ClientCert_pem_start;
+        config_post.transport_type = HTTP_TRANSPORT_OVER_SSL;
     } else {
         printf("Not using SSL\n");
         config_post.cert_pem = NULL;
@@ -135,12 +136,17 @@ void client_post_function(const char* payload, const char* post_path) {
     if (strncmp(url, "https", 5) == 0) {
         printf("Using SSL\n");  
         config_post.cert_pem = (const char *)ClientCert_pem_start;
+        config_post.transport_type = HTTP_TRANSPORT_OVER_SSL;
     } else {
         printf("Not using SSL\n");
         config_post.cert_pem = NULL;
     }
     config_post.event_handler = client_event_post_handler;
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
+     if (client == NULL) {
+        printf("Failed to initialize HTTP client\n");
+        return;
+    }
 
     char auth_header[512];
     memset(auth_header, 0, sizeof(auth_header));
@@ -154,7 +160,6 @@ void client_post_function(const char* payload, const char* post_path) {
     esp_http_client_set_post_field(client, payload, strlen(payload));
     esp_http_client_set_header(client, "Authorization", auth_header);
     esp_http_client_set_header(client, "Content-Type", "application/json");
-
     esp_http_client_perform(client);
     esp_http_client_cleanup(client);
 }
