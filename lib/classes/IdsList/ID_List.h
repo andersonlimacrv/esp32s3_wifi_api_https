@@ -1,10 +1,10 @@
-#ifndef EQUIPMENTLIST_H
-#define EQUIPMENTLIST_H
+#ifndef ID_LIST_H
+#define ID_LIST_H
 
 #include <vector>
 
 // Definition of a structure to store equipment IDs
-struct Equipment {
+struct IdsList {
     int unidadeId;
     int condensadorId;
     int condensacaoId;
@@ -25,7 +25,7 @@ struct Singleton {
     }
 };
 
-// Declaration of a global instance of the Equipment structure
-extern Equipment& equipment;
+// Declaration of a global instance of the IdsList structure
+extern IdsList& idList;
 
-#endif // EQUIPMENTLIST_H
+#endif // ID_LIST_H

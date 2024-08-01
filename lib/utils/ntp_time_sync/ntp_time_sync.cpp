@@ -1,11 +1,4 @@
 #include "ntp_time_sync.h"
-/* Sincronização de tempo usando o SNTP (Simple Network Time Protocol)
-
-1. Obtém o tempo atual em um formato específico.
-2. Define um tratador para notificações de sincronização de tempo.
-3. Inicializa o SNTP para sincronização de tempo com um servidor NTP específico.
-
-*/
 
 void get_time_now(char *time_buffer, size_t buffer_size) {
     time_t now;
@@ -15,7 +8,7 @@ void get_time_now(char *time_buffer, size_t buffer_size) {
 }
 
 void handler_time_sync_cb(struct timeval *tv) { 
-    printf("Initializing handler for time sync notification\n");
+    printf("Initialized SNTP.\n");
     char time_buffer[64];
     get_time_now(time_buffer, sizeof(time_buffer));
     printf("Time Synced: %s\n", time_buffer);

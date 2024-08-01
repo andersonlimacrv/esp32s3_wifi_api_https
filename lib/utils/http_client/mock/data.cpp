@@ -2,8 +2,9 @@
 
 // Exemple of how to create a periodic task for Post the condensador data
 void post_condensador_mock_task(void* pvParameters) {
+   
     TickType_t last_wake_time_post = xTaskGetTickCount();
-    const TickType_t interval_post = pdMS_TO_TICKS(20000); // Post each 20 seconds
+    const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 20 seconds
 
     for (;;) {
 
@@ -42,12 +43,17 @@ void post_condensador_mock_task(void* pvParameters) {
         velocidadeArEntrada, 
         corrente, 
         frequencia, 
-        equipment.condensadorId);
+        idList.condensadorId);
 
         char* payload_copy = new char[payload.size() + 1];
             std::strcpy(payload_copy, payload.c_str());
 
+         if (wifiManager.isConnected()) {
         xTaskCreate(post_condensador_task, "post_condensador_task", 10000, (void*)payload_copy, 1, NULL);
+    } else {
+        printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
+    }
+
         vTaskDelayUntil(&last_wake_time_post, interval_post);
     }
 }
@@ -59,7 +65,8 @@ void post_bombas_condensador_mock_task(void* pvParameters) {
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
 
     for (;;) {
-        for (int bombaId : equipment.bombaIds) {
+        for (int bombaId : idList.bombaIds) {
+
             char time_buffer[64];
             get_time_now(time_buffer, sizeof(time_buffer));
             bool ligado = true;
@@ -87,6 +94,7 @@ void post_bombas_condensador_mock_task(void* pvParameters) {
             xTaskCreate(post_bomba_task, "post_bomba_task", 8192, (void*)payload_copy, 1, NULL);
         }
         vTaskDelayUntil(&last_wake_time_post, interval_post);
+        
     }
 }
 
@@ -97,9 +105,9 @@ void post_ventiladores_condensador_mock_task(void* pvParameters) {
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
 
     for (;;) {
-        for (int ventiladorId : equipment.ventiladorIds) {
+        for (int ventiladorId : idList.ventiladorIds) {
 
-             char time_buffer[64];
+        char time_buffer[64];
         get_time_now(time_buffer, sizeof(time_buffer));
         bool ligado = true;
 
@@ -136,7 +144,7 @@ void post_ambientes_mock_task(void* pvParameters) {
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
 
     for (;;) {
-        for (int ambienteId : equipment.ambienteIds) {
+        for (int ambienteId : idList.ambienteIds) {
         char time_buffer[64];
         get_time_now(time_buffer, sizeof(time_buffer));
 
@@ -165,7 +173,7 @@ void post_compressores_mock_task(void* pvParameters) {
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
 
     for (;;) {
-        for (int compressorId : equipment.compressorIds) {
+        for (int compressorId : idList.compressorIds) {
         char time_buffer[64];
         get_time_now(time_buffer, sizeof(time_buffer));
 
@@ -229,7 +237,7 @@ void post_regimes_mock_task(void* pvParameters) {
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
 
     for (;;) {
-        for (int regimeId : equipment.regimeIds) {
+        for (int regimeId : idList.regimeIds) {
         char time_buffer[64];
         get_time_now(time_buffer, sizeof(time_buffer));
 
@@ -272,7 +280,7 @@ void post_regime_condensacao_mock_task(void* pvParameters) {
         std::string payload = format_payload_regime(
             time_buffer,
             pressaoAtual,
-            equipment.condensacaoId);
+            idList.condensacaoId);
         char* payload_copy = new char[payload.size() + 1];
         std::strcpy(payload_copy, payload.c_str());
         xTaskCreate(post_regime_condensacao_task, "post_regime_condensacao_task", 8192, (void*)payload_copy, 1, NULL);
@@ -327,7 +335,7 @@ void post_energia_mock_task(void* pvParameters) {
             consumoAtivoForaDePontaCapacitivo,
             consumoAtivoPonta,
             periodoMedicao,
-            equipment.unidadeId
+            idList.unidadeId
             );
 
         char* payload_copy = new char[payload.length() + 1];

@@ -8,25 +8,29 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "../../../src/Credentials.h"
-#include "../http_client/http_client.h"
-#include "../ntp_time_sync/ntp_time_sync.h"
+#include "../utils/http_client/http_client.h"
+#include "../utils/ntp_time_sync/ntp_time_sync.h"
 #include <string.h>
 
 class WiFiManager {
 public:
     WiFiManager();
     void startConnection(const char* ssid, const char* pass);
+    bool isConnected() const;
+
+private:
+    void initializeWiFi();
+    void connect();
     static void printIpInfoTask(void *pvParameter);
     static void printMacAddressTask(void *pvParameter);
     static void wifiEventHandler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 
-private:
+    static EventGroupHandle_t wifi_event_group;
+    static const int WIFI_CONNECTED_BIT = BIT0; 
     const char* ssid;
     const char* pass;
-    EventGroupHandle_t wifi_event_group;
-    static const int WIFI_CONNECTED_BIT = BIT0; 
-    void initializeWiFi();
-    void connect();
 };
+
+extern WiFiManager wifiManager;
 
 #endif // WIFI_MANAGER_H

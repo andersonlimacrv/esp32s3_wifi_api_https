@@ -5,12 +5,16 @@ void setup() {
     Serial.begin(115200);
     esp_log_level_set("*", ESP_LOG_DEBUG);
     nvs_flash_init();
-
-    WiFiManager wifiManager;
+    
     wifiManager.startConnection(CREDENTIALS_SSID, CREDENTIALS_PASSWORD);
 
-    // Cria tarefa para postar dados do condensador a cada 60 segundos
+    if (wifiManager.isConnected()) {
     xTaskCreate(post_condensador_mock_task, "post_condensador_mock_task", 8000, NULL, 1, NULL);
+    } else {
+        printf("[MAIN] Client Wi-Fi Not Connected.\n");
+    }
+
+    // Cria tarefa para postar dados do condensador a cada 60 segundos
     
     // Cria tarefa para postar dados das bombas periodicamente
     //xTaskCreate(post_bombas_condensador_mock_task, "post_bombas_condensador_mock_task", 8000, NULL, 1, NULL);
