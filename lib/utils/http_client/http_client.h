@@ -9,9 +9,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_http_client.h"
+#include "freertos/event_groups.h"
 #include "../payload_formatter/payload_formatter.h"
 #include "../ntp_time_sync/ntp_time_sync.h"
 #include "../../../src/Credentials.h"
+#include "freertos/event_groups.h"
 
 typedef struct {
     const char * const post_login;
@@ -53,4 +55,7 @@ void post_regime_task(void* pvParameters);
 void post_regime_condensacao_task(void* pvParameters);
 void post_energia_task(void* pvParameters);
 
-#endif 
+void initialize_auth_event_group();
+void initialize_post_mutex();
+
+#endif

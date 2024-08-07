@@ -7,55 +7,53 @@ void post_condensador_mock_task(void* pvParameters) {
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 20 seconds
 
     for (;;) {
+            char time_buffer[64];
+            get_time_now(time_buffer, sizeof(time_buffer));
+            bool ligado = true;
 
-    char time_buffer[64];
-    get_time_now(time_buffer, sizeof(time_buffer));
-    bool ligado = true;
+            std::hash<std::string> hasher;
+            size_t seed = hasher(time_buffer);
 
-    std::hash<std::string> hasher;
-    size_t seed = hasher(time_buffer);
+            std::mt19937 gen(seed); 
 
-    std::mt19937 gen(seed); 
+            std::uniform_real_distribution<float> float_tempIn_dist(15.0, 20.0); 
+            std::uniform_real_distribution<float> float_tempOut_dist(21.0, 30.0);
+            std::uniform_real_distribution<float> float_umidIn_dist(50, 60);
+            std::uniform_real_distribution<float> float_umidOut_dist(80, 90);
+            std::uniform_real_distribution<float> velocidadeArEntrada_dist(5.6, 11.15);
+            std::uniform_real_distribution<float> corrente_dist(0.00, 1.15); 
+            std::uniform_int_distribution<int> frequencia_dist(55, 60); 
 
-    std::uniform_real_distribution<float> float_tempIn_dist(15.0, 20.0); 
-    std::uniform_real_distribution<float> float_tempOut_dist(21.0, 30.0);
-    std::uniform_real_distribution<float> float_umidIn_dist(50, 60);
-    std::uniform_real_distribution<float> float_umidOut_dist(80, 90);
-    std::uniform_real_distribution<float> velocidadeArEntrada_dist(5.6, 11.15);
-    std::uniform_real_distribution<float> corrente_dist(0.00, 1.15); 
-    std::uniform_int_distribution<int> frequencia_dist(55, 60); 
+            float temperaturaEntrada = float_tempIn_dist(gen);
+            float temperaturaSaida = float_tempOut_dist(gen);
+            float umidadeRelativaEntrada = float_umidIn_dist(gen);
+            float umidadeRelativaSaida = float_umidOut_dist(gen);
+            float velocidadeArEntrada = velocidadeArEntrada_dist(gen);
+            float corrente = corrente_dist(gen);
+            int frequencia = frequencia_dist(gen);
 
-    float temperaturaEntrada = float_tempIn_dist(gen);
-    float temperaturaSaida = float_tempOut_dist(gen);
-    float umidadeRelativaEntrada = float_umidIn_dist(gen);
-    float umidadeRelativaSaida = float_umidOut_dist(gen);
-    float velocidadeArEntrada = velocidadeArEntrada_dist(gen);
-    float corrente = corrente_dist(gen);
-    int frequencia = frequencia_dist(gen);
+            std::string payload = format_payload_condensador(
+                ligado,
+                time_buffer,
+                temperaturaEntrada, 
+                umidadeRelativaEntrada, 
+                temperaturaSaida, 
+                umidadeRelativaSaida, 
+                velocidadeArEntrada, 
+                corrente, 
+                frequencia, 
+                idList.condensadorId);
 
-    std::string payload = format_payload_condensador(
-        ligado,
-        time_buffer,
-        temperaturaEntrada, 
-        umidadeRelativaEntrada, 
-        temperaturaSaida, 
-        umidadeRelativaSaida, 
-        velocidadeArEntrada, 
-        corrente, 
-        frequencia, 
-        idList.condensadorId);
+            char* payload_copy = new char[payload.size() + 1];
+                std::strcpy(payload_copy, payload.c_str());
 
-        char* payload_copy = new char[payload.size() + 1];
-            std::strcpy(payload_copy, payload.c_str());
-
-         if (wifiManager.isConnected()) {
-        xTaskCreate(post_condensador_task, "post_condensador_task", 10000, (void*)payload_copy, 1, NULL);
-    } else {
-        printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
-    }
-
-        vTaskDelayUntil(&last_wake_time_post, interval_post);
-    }
+            if (wifiManager.isConnected()) {
+                xTaskCreate(post_condensador_task, "post_condensador_task", 8192, (void*)payload_copy, 1, NULL);
+            } else {
+                printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
+            }
+            vTaskDelayUntil(&last_wake_time_post, interval_post);
+        }
 }
 
 
@@ -91,12 +89,29 @@ void post_bombas_condensador_mock_task(void* pvParameters) {
             char* payload_copy = new char[payload.size() + 1];
             std::strcpy(payload_copy, payload.c_str());
 
-            xTaskCreate(post_bomba_task, "post_bomba_task", 8192, (void*)payload_copy, 1, NULL);
+             if (wifiManager.isConnected()) {
+               // Send payload to POST TASK Queue
+                xQueueSend(postQueueBombas, &payload_copy, portMAX_DELAY);
+            } else {
+                printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
+            }
         }
         vTaskDelayUntil(&last_wake_time_post, interval_post);
         
     }
 }
+
+void process_queue_bombas_task(void* pvParameters) {
+    char* payload_copy;
+
+    for (;;) {
+        // Receive data from the queue
+        if (xQueueReceive(postQueueBombas, &payload_copy, portMAX_DELAY) == pdPASS) {
+             xTaskCreate(post_bomba_task, "post_bomba_task", 6024, (void*)payload_copy, 1, NULL);
+        }
+    }
+}
+
 
 
 // Exemple of how to create a periodic task for Post the ventilador data
@@ -132,39 +147,77 @@ void post_ventiladores_condensador_mock_task(void* pvParameters) {
             char* payload_copy = new char[payload.size() + 1];
             std::strcpy(payload_copy, payload.c_str());
 
-            xTaskCreate(post_ventilador_task, "post_ventilador_task", 8192, (void*)payload_copy, 1, NULL);
+            
+           if (wifiManager.isConnected()) {
+            // Send payload to POST TASK Queue
+                xQueueSend(postQueueVentiladores, &payload_copy, portMAX_DELAY);
+            } else {
+                printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
+            }
         }
         vTaskDelayUntil(&last_wake_time_post, interval_post);
     }
 }
 
 
+void process_queue_ventiladores_task(void* pvParameters) {
+    char* payload_copy;
+
+    for (;;) {
+        // Receive data from the queue
+        if (xQueueReceive(postQueueVentiladores, &payload_copy, portMAX_DELAY) == pdPASS) {
+             xTaskCreate(post_ventilador_task, "post_ventilador_task", 6024, (void*)payload_copy, 1, NULL);
+
+        }
+    }
+}
+
+// Exemple of how to create a periodic task for Post the ambiente data
 void post_ambientes_mock_task(void* pvParameters) {
     TickType_t last_wake_time_post = xTaskGetTickCount();
     const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 60 seconds
 
     for (;;) {
         for (int ambienteId : idList.ambienteIds) {
-        char time_buffer[64];
-        get_time_now(time_buffer, sizeof(time_buffer));
+            char time_buffer[64];
+            get_time_now(time_buffer, sizeof(time_buffer));
 
-        std::hash<std::string> hasher;
-        size_t seed = hasher(time_buffer);
+            std::hash<std::string> hasher;
+            size_t seed = hasher(time_buffer);
 
-        std::mt19937 gen(seed);
-        std::uniform_real_distribution<float> temperaturaAtual_dist(20.00, 30.00);
+            std::mt19937 gen(seed);
+            std::uniform_real_distribution<float> temperaturaAtual_dist(20.00, 30.00);
 
-        float temperaturaAtual = temperaturaAtual_dist(gen);
+            float temperaturaAtual = temperaturaAtual_dist(gen);
 
-        std::string payload = format_payload_ambiente(
-            time_buffer,
-            temperaturaAtual,
-            ambienteId);
-        char* payload_copy = new char[payload.size() + 1];
-        std::strcpy(payload_copy, payload.c_str());
-        xTaskCreate(post_ambiente_task, "post_ambiente_task", 8192, (void*)payload_copy, 1, NULL);
+            std::string payload = format_payload_ambiente(
+                time_buffer,
+                temperaturaAtual,
+                ambienteId);
+
+            char* payload_copy = new char[payload.size() + 1];
+            std::strcpy(payload_copy, payload.c_str());
+
+            if (wifiManager.isConnected()) {
+            // Send payload to POST TASK Queue
+            xQueueSend(postQueueAmbientes, &payload_copy, portMAX_DELAY);
+            } else {
+                printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
+            }
         }
         vTaskDelayUntil(&last_wake_time_post, interval_post);
+    }
+}
+
+void process_queue_ambientes_task(void* pvParameters) {
+    char* payload_copy;
+
+    for (;;) {
+        // Receive data from the queue
+        if (xQueueReceive(postQueueAmbientes, &payload_copy, portMAX_DELAY) == pdPASS) {
+            xTaskCreate(post_ambiente_task, "post_ambiente_task", 6024, (void*)payload_copy, 1, NULL);
+
+        }
     }
 }
 
@@ -225,7 +278,8 @@ void post_compressores_mock_task(void* pvParameters) {
         char* payload_copy = new char[payload.size() + 1];
         std::strcpy(payload_copy, payload.c_str());
 
-            xTaskCreate(post_compressor_task, "post_compressor_task", 8192, (void*)payload_copy, 1, NULL);
+        xTaskCreate(post_compressor_task, "post_compressor_task", 8192, (void*)payload_copy, 1, NULL);
+        
         }
         vTaskDelayUntil(&last_wake_time_post, interval_post);
     }

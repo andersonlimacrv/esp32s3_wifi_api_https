@@ -7,7 +7,7 @@ WiFiManager::WiFiManager() {
     if (wifi_event_group == nullptr) {
         wifi_event_group = xEventGroupCreate();
         if (wifi_event_group == NULL) {
-            ESP_LOGE("WiFiManager", "Failed to create event group");
+           printf("[WiFiManager] Failed to create event group");
         }
     }
 }
@@ -29,28 +29,37 @@ void WiFiManager::initializeWiFi() {
 }
 
 void WiFiManager::connect() {
+    // Register event handlers for Wi-Fi events and IP acquisition
     esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiManager::wifiEventHandler, this);
     esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &WiFiManager::wifiEventHandler, this);
 
+    // Configure Wi-Fi settings
     wifi_config_t wifi_configuration = {};
     strncpy(reinterpret_cast<char*>(wifi_configuration.sta.ssid), ssid, sizeof(wifi_configuration.sta.ssid) - 1);
     strncpy(reinterpret_cast<char*>(wifi_configuration.sta.password), pass, sizeof(wifi_configuration.sta.password) - 1);
-
     esp_wifi_set_config(WIFI_IF_STA, &wifi_configuration);
     esp_wifi_start();
 
-    while (true) {
-        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
-        if (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) {
-            xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
-            xTaskCreate(ntp_time_sync_task, "ntp_time_sync_task", 2048, NULL, 1, NULL);
-            vTaskDelay(5000 / portTICK_PERIOD_MS);
-            break;
-        }
-        printf("Retrying WiFi connection...\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+    // Wait for Wi-Fi connection to be established
+    EventBits_t uxBits = xEventGroupWaitBits(
+        wifi_event_group,               // The event group to wait for
+        WIFI_CONNECTED_BIT,             // The bit that should be set
+        pdFALSE,                        // Do not clear the bit when it exits
+        pdTRUE,                         // Wait for all bits specified (only one in this case)
+        portMAX_DELAY                   // Wait indefinitely until the bit is set
+    );
+
+    // Check if the connection bit was set
+    if (uxBits & WIFI_CONNECTED_BIT) {
+        // after Wi-Fi connection is established
+        xTaskCreate(ntp_time_sync_task, "ntp_time_sync_task", 2048, NULL, 1, NULL);
+        vTaskDelay(5000 / portTICK_PERIOD_MS); // Wait for 5 sec 
+        xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
+    } else {
+        printf("Failed to connect to Wi-Fi.\n");
     }
 }
+
 
 void WiFiManager::printIpInfoTask(void* pvParameter) {
     if (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) {
