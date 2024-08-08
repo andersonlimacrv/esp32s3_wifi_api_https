@@ -278,10 +278,26 @@ void post_compressores_mock_task(void* pvParameters) {
         char* payload_copy = new char[payload.size() + 1];
         std::strcpy(payload_copy, payload.c_str());
 
-        xTaskCreate(post_compressor_task, "post_compressor_task", 8192, (void*)payload_copy, 1, NULL);
-        
+         if (wifiManager.isConnected()) {
+            // Send payload to POST TASK Queue
+            xQueueSend(postQueueCompressores, &payload_copy, portMAX_DELAY);
+        } else {
+            printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
+        }
+
         }
         vTaskDelayUntil(&last_wake_time_post, interval_post);
+    }
+}
+
+void process_queue_compressores_task(void* pvParameters) {
+    char* payload_copy;
+
+    for (;;) {
+        // Receive data from the queue
+        if (xQueueReceive(postQueueCompressores, &payload_copy, portMAX_DELAY) == pdPASS) {
+            xTaskCreate(post_compressor_task, "post_compressor_task", 6024, (void*)payload_copy, 1, NULL);
+        }
     }
 }
 

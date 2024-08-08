@@ -13,15 +13,16 @@
 extern QueueHandle_t postQueueAmbientes;
 extern QueueHandle_t postQueueVentiladores;
 extern QueueHandle_t postQueueBombas;
+extern QueueHandle_t postQueueCompressores;
 
-void post_condensador_mock_task(void* pvParameters);
 
 void process_queue_ventiladores_task(void* pvParameters);
 void process_queue_bombas_task(void* pvParameters);
 void process_queue_ambientes_task(void* pvParameters);
+void process_queue_compressores_task(void* pvParameters);
 
+void post_condensador_mock_task(void* pvParameters);
 void post_ambientes_mock_task(void* pvParameters);
-
 void post_bombas_condensador_mock_task(void* pvParameters);
 void post_ventiladores_condensador_mock_task(void* pvParameters);
 void post_compressores_mock_task(void* pvParameters);
