@@ -4,7 +4,7 @@ Cliente HTTPS usando o ESP-IDF no mesmo ESP32, de forma paralela.
 
 ## Criando Certificados PEM para o Servidor
 
-Para criar os certificados PEM para o lado do servidor, utilize o seguinte comando OpenSSL:
+Passo 1: Para criar os certificados PEM para o lado do servidor, utilize o seguinte comando OpenSSL:
 
 ```bash
 openssl req -newkey rsa:2048 -nodes -keyout ServerKey.pem -x509 -days 3650 -out ServerCert.pem -subj "/CN=ESP32S3_01_HTTPS"
@@ -17,10 +17,12 @@ Utilize o comando a seguir para visualizar os certificados do site ao qual desej
 
 ```bash
 openssl s_client -showcerts -connect actions-fastapi.onrender.com:443
-openssl s_client -showcerts -connect sgemapi.cess.ind.br:443
 ```
 
+obs\*: `O website não deverá conter www e sempre será na porta 443.`
+
 Copie os certificados exibidos e cole-os em um único arquivo ClientCert.pem para o cliente.
+`Copie apenas oque está entre CERTIFICATE-----BEGIN CERTIFICATE----- e CERTIFICATE-----END CERTIFICATE-----, que aparecerão 3 vezes.`
 
 Passo 3: Configurando o Cliente ESP32S3_01
 Agora, você pode configurar o seu cliente ESP32S3_01 para se conectar ao site https://www.actions-fastapi.onrender.com utilizando os certificados PEM gerados.
