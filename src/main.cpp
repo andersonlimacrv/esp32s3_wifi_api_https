@@ -50,9 +50,9 @@ void setup() {
         // Cria tarefa para postar dados dos ventiladores
         //xTaskCreate(post_ventiladores_condensador_mock_task, "post_ventiladores_condensador_mock_task", 6096, NULL, 1, NULL);
         // Cria tarefa para postar dados das ambientes periodicamente
-        xTaskCreate(post_ambientes_mock_task, "post_ambientes_mock_task", 6096, NULL, 1, NULL);
+        //xTaskCreate(post_ambientes_mock_task, "post_ambientes_mock_task", 6096, NULL, 1, NULL);
         // Cria tarefa para postar dados dos regimes
-        xTaskCreate(post_regimes_mock_task, "post_regimes_mock_task", 6096, NULL, 1, NULL);
+        //xTaskCreate(post_regimes_mock_task, "post_regimes_mock_task", 6096, NULL, 1, NULL);
         // Cria tarefa para postar dados dos regimes de condensação
         // xTaskCreate(post_regime_condensacao_mock_task, "post_regime_condensacao_mock_task", 6096, NULL, 1, NULL);
         // Cria tarefa para postar dados das energias
