@@ -27,9 +27,9 @@ void setup() {
 
     if (wifiManager.isConnected()) {
         createQueue(&postQueueAmbientes, "postQueueAmbientes", 50, sizeof(char*));
-        createQueue(&postQueueVentiladores, "postQueueVentiladores", 12, sizeof(char*));
-        createQueue(&postQueueBombas, "postQueueBombas", 12, sizeof(char*));
-        createQueue(&postQueueCompressores, "postQueueCompressores", 12, sizeof(char*));
+        //createQueue(&postQueueVentiladores, "postQueueVentiladores", 12, sizeof(char*));
+        //createQueue(&postQueueBombas, "postQueueBombas", 12, sizeof(char*));
+        //createQueue(&postQueueCompressores, "postQueueCompressores", 12, sizeof(char*));
         // Cria tarefa para processar a fila e enviar os dados se necessário (ambientes)
         //xTaskCreate(process_queue_ambientes_task, "process_queue_ambientes_task", 1096, NULL, 1, NULL);
         // Cria tarefa para processar a fila e enviar os dados se há (ventiladores)
