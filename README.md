@@ -40,11 +40,12 @@ Now, you can configure your ESP32S3_01 client to connect to the site https://www
 Open the `Credentials.h` file and add the following code:
 
 ```c
+
 #ifndef CREDENTIALS_H
 #define CREDENTIALS_H
 
-#include "EquipmentList.h"
-
+#include "../lib/classes/IdsList/ID_List.h"
+#define USE_EXTERNAL_BACKEND 1
 
 static const char * const CREDENTIALS_SSID = "YOUR_WIFI_SSID";
 static const char * const CREDENTIALS_PASSWORD = "YOUR_WIFI_PASSWORD";
@@ -53,7 +54,7 @@ static const char * const CREDENTIALS_LOGIN_PASSWORD = "LOGIN_PASSWORD";
 
 // Function to initialize the equipment IDs inline, example with IDs
 inline void initializeEquipmentIds() {
-    Equipment& eq = Singleton<Equipment>::instance();
+    IdsList& eq = Singleton<IdsList>::instance();
     eq.condensadorId = 1;
     eq.condensacaoId = 4;
     eq.bombaIds = {1, 2};
