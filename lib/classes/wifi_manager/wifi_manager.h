@@ -15,12 +15,13 @@
 class WiFiManager {
 public:
     WiFiManager();
-    void startConnection(const char* ssid, const char* pass);
+    void startConnection(const char* ssid, const char* pass, bool useStaticIP);
     bool isConnected() const;
 
 private:
+    void setTxPower();
     void initializeWiFi();
-    void connect();
+    void connect(bool useStaticIP); 
     static void printIpInfoTask(void *pvParameter);
     static void printMacAddressTask(void *pvParameter);
     static void wifiEventHandler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
@@ -29,7 +30,14 @@ private:
     static const int WIFI_CONNECTED_BIT = BIT0; 
     const char* ssid;
     const char* pass;
+    
+    // Variáveis para IP estático
+    static const char* STATIC_IP;
+    static const char* STATIC_NETMASK;
+    static const char* STATIC_GATEWAY;
+    static const char* STATIC_DNS;
 };
+
 
 extern WiFiManager wifiManager;
 

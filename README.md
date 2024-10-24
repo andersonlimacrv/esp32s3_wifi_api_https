@@ -1,60 +1,69 @@
 # HTTPS-ESP-HTTPS-Server-Client
 
-> ### Creating PEM Certificates for the Server
+> ### Criando Certificados PEM para o Servidor
 
-`Step 1`: To create PEM certificates for the server side, use the following OpenSSL command:
+`Passo 1`: Para criar os certificados PEM para o lado do servidor, utilize o seguinte comando OpenSSL:
 
 ```bash
 openssl req -newkey rsa:2048 -nodes -keyout ServerKey.pem -x509 -days 3650 -out ServerCert.pem -subj "/CN=ESP32S3_01_HTTPS"
 ```
 
-Replace ESP32S3_01 HTTPS server with your server name, if desired.
+Substitua ESP32S3_01 HTTPS server pelo nome do seu servidor, se desejar.
 
-`Step 2`: Creating PEM Certificates for the Client
-Use the following command to view the certificates of the site you want to connect to, such as https://actions-fastapi.onrender.com:
+`Passo 2`: Criando Certificados PEM para o Cliente
+Utilize o comando a seguir para visualizar os certificados do site ao qual deseja se conectar, como por exemplo, https://actions-fastapi.onrender.com:
 
 ```bash
 openssl s_client -showcerts -connect actions-fastapi.onrender.com:443
 ```
 
-_NOTE_: `The website should not contain www and will always be on port 443.`
+_OBS_: `O website não deverá conter www e sempre será na porta 443.`
 
-Copy the displayed certificates and paste them into a single file named ClientCert.pem for the client.
+Copie os certificados exibidos e cole-os em um único arquivo ClientCert.pem para o cliente.
 
-`Copy only what is between -----BEGIN CERTIFICATE----- (...) and -----END CERTIFICATE-----, which will appear 3 times.`
+`Copie apenas oque está entre -----BEGIN CERTIFICATE----- (...) e -----END CERTIFICATE-----, que aparecerão 3 vezes.`
 
-`Step 3`: Configuring the ESP32S3_01 Client
-Now, you can configure your ESP32S3_01 client to connect to the site https://www.actions-fastapi.onrender.com using the generated PEM certificates.
+`Passo 3`: Configurando o Cliente ESP32S3_01
+Agora, você pode configurar o seu cliente ESP32S3_01 para se conectar ao site https://www.actions-fastapi.onrender.com utilizando os certificados PEM gerados.
 
-# Filling in the Credentials in the `Credentials.h` File
+`Passo 4`: Adicionando FLAG de configuração no plataformio.ini
+No arquivo de configuração para utilizar o platformio, e que o caminho do certificado seja lido, deverá ser incluída a FLAG:
 
-> ### Guidelines on how to fill in Wi-Fi credentials, login, and configure equipment IDs in the `Credentials.h` file. This file will be created in the `src/` directory.
+<!-- codigo .ini -->
 
-### Step 1: Create the `Credentials.h` File
+```js
+board_build.embed_txtfiles = 
+    lib/utils/http_client/certs/ClientCert.pem
+```
 
-1. Navigate to the `src/` directory in your project.
-2. Create a new file named `Credentials.h`.
+# Preenchendo as Credenciais no Arquivo `Credentials.h`
 
-### Step 2: Fill in the Wi-Fi and Login Credentials
+> ### Orientações de como preencher as credenciais de Wi-Fi, login e configurar os IDs de equipamentos no arquivo `Credentials.h`. Esse arquivo será criado no diretório `src/`.
 
-Open the `Credentials.h` file and add the following code:
+### Passo 1: Criar o Arquivo `Credentials.h`
+
+1. Navegue até o diretório `src/` no seu projeto.
+2. Crie um novo arquivo chamado `Credentials.h`.
+
+### Passo 2: Preencher as Credenciais de Wi-Fi e Login
+
+Abra o arquivo `Credentials.h` e adicione o seguinte código:
 
 ```c
-
 #ifndef CREDENTIALS_H
 #define CREDENTIALS_H
 
 #include "../lib/classes/IdsList/ID_List.h"
-#define USE_EXTERNAL_BACKEND 1
+#define USE_EXTERNAL_BACKEND 0 // 0 = LOCAL; 1 = EXTERNAL CLOUD SGEM API
 
-static const char * const CREDENTIALS_SSID = "YOUR_WIFI_SSID";
-static const char * const CREDENTIALS_PASSWORD = "YOUR_WIFI_PASSWORD";
-static const char * const CREDENTIALS_LOGIN_USERNAME = "LOGIN_USERNAME";
-static const char * const CREDENTIALS_LOGIN_PASSWORD = "LOGIN_PASSWORD";
+static const char * const CREDENTIALS_SSID = "YOUR_WIFI_SSID";              // WIFI SSID 
+static const char * const CREDENTIALS_PASSWORD = "YOUR_WIFI_PASSWORD";      // WIFI PASSWORD 
+static const char * const CREDENTIALS_LOGIN_USERNAME = "LOGIN_USERNAME";    // USERNAME FROM SGEM USER TO POST 
+static const char * const CREDENTIALS_LOGIN_PASSWORD = "LOGIN_PASSWORD";    // PASSWORD FROM SGEM USER TO POST
 
-// Function to initialize the equipment IDs inline, example with IDs
+// Function to initialize the equipment IDs inline, exemple with ID's
 inline void initializeEquipmentIds() {
-    IdsList& eq = Singleton<IdsList>::instance();
+    Equipment& eq = Singleton<Equipment>::instance();
     eq.condensadorId = 1;
     eq.condensacaoId = 4;
     eq.bombaIds = {1, 2};
@@ -64,34 +73,33 @@ inline void initializeEquipmentIds() {
     eq.regimeIds = {1, 2, 3};
 }
 
-// Definition of the backend URL
+// Definição da URL do backend
 #ifdef USE_EXTERNAL_BACKEND
-    #define CREDENTIALS_BACKEND_URL "https://actions-fastapi.onrender.com" // Example backend URL
+    #define CREDENTIALS_BACKEND_URL "https://actions-fastapi.onrender.com" // Exemple backend URL
 #else
-    //#define CREDENTIALS_BACKEND_URL "http://192.168.18.18:7022"
-    #define CREDENTIALS_BACKEND_URL "http://192.168.2.155:7022"
+    #define CREDENTIALS_BACKEND_URL "http://192.168.2.155:7022" // Backend LOCAL from development environment
 #endif
 
 #endif  /* CREDENTIALS_H */
 ```
 
-### Step 3: Configuring the Equipment IDs
+### Passo 3: Configuração dos IDs dos Equipamentos
 
-The `initializeEquipmentIds` function is used to initialize the equipment IDs. This code is already included in the block of code above.
+A função `initializeEquipmentIds` é usada para inicializar os IDs dos equipamentos. Este código já está incluído no bloco de código acima.
 
-### Step 4: Defining the Backend URL
+### Passo 4: Definição da URL do Backend
 
-In the provided code, the backend URL is defined conditionally based on the `USE_EXTERNAL_BACKEND` definition.
+No código fornecido, a URL do backend é definida condicionalmente com base na definição de `USE_EXTERNAL_BACKEND`.
 
-- If `USE_EXTERNAL_BACKEND` is defined, the URL will be `https://actions-fastapi.onrender.com` (site backend).
-- Otherwise, the default URL will be `http://192.168.2.155:7022` (localhost).
+- Se `USE_EXTERNAL_BACKEND` estiver definido, a URL será `https://actions-fastapi.onrender.com` (backend do site).
+- Caso contrário, a URL padrão será `http://192.168.2.155:7022` (localhost).
 
-### Step 5: Saving the File
+### Passo 5: Salvando o Arquivo
 
-After entering the code, save the `Credentials.h` file in the `src/` directory.
+Após inserir o código, salve o arquivo `Credentials.h` no diretório `src/`.
 
-## Conclusion
+## Conclusão
 
-You have successfully configured the `Credentials.h` file with Wi-Fi credentials, login, equipment IDs, and backend URL. This file is essential for the correct operation of the HTTPS client on the ESP32.
+Você configurou com sucesso o arquivo `Credentials.h` com as credenciais de Wi-Fi, login, IDs de equipamentos e URL do backend. Este arquivo é essencial para o funcionamento correto do cliente HTTPS no ESP32.
 
-`This tutorial covers all the necessary steps to fill in and configure the 'Credentials.h' file correctly and how to generate the certificate for a specific site when making HTTPS requests via SSL/TLS.`
+`Este tutorial cobre todos os passos necessários para preencher e configurar o arquivoc 'Credentials.h' corretamente e como gerar o certificado para determinado site ao fazer requisições HTTPS via SSL/TLS.`

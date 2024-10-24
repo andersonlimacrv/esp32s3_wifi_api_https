@@ -11,6 +11,7 @@ struct IdsList {
     std::vector<int> bombaIds;
     std::vector<int> ventiladorIds;
     std::vector<int> ambienteIds;
+    std::vector<int> chillerIds;
     std::vector<int> compressorIds;
     std::vector<int> regimeIds;
 

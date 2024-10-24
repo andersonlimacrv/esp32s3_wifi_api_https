@@ -18,12 +18,11 @@ void setup() {
     initializeEquipmentIds();
     initialize_auth_event_group();
     initialize_post_mutex();
+    esp_log_level_set("*", ESP_LOG_DEBUG);
     
     Serial.begin(115200);
-    esp_log_level_set("*", ESP_LOG_DEBUG);
-    nvs_flash_init();
     
-    wifiManager.startConnection(CREDENTIALS_SSID, CREDENTIALS_PASSWORD);
+    wifiManager.startConnection(CREDENTIALS_SSID,CREDENTIALS_PASSWORD, false);
 
     if (wifiManager.isConnected()) {
         createQueue(&postQueueAmbientes, "postQueueAmbientes", 50, sizeof(char*));

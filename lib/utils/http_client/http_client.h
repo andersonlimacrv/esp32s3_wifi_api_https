@@ -25,6 +25,7 @@ typedef struct {
     const char * const post_regime;
     const char * const post_regime_condensacao;
     const char * const post_energia;
+    const char * const post_linha_liquido;
 } EndpointPaths;
 
 const EndpointPaths paths = {
@@ -36,15 +37,16 @@ const EndpointPaths paths = {
     .post_compressor = "/api/leitura-compressor",
     .post_regime = "/api/leitura-regime",
     .post_regime_condensacao = "/api/leitura-condensacao",
-    .post_energia = "/api/leitura-energia"
+    .post_energia = "/api/leitura-energia",
+    .post_linha_liquido = "/api/leitura-linha-liquido"
 };
 
 extern const EndpointPaths paths;
 
 esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt);
 void client_post_auth_login(void *param);
-void client_post_function(const char* payload, const char* post_path);
 void authenticated_post_task(const char* payload, const char* post_path);
+void client_post_function(const char* payload, const char* post_path);
 void retry_post_task(void *param);
 
 void post_bomba_task(void* pvParameters);

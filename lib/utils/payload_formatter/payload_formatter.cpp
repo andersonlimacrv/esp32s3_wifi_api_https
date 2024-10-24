@@ -47,6 +47,12 @@ std::string format_payload_regime(const std::string& dataHora, float pressaoAtua
     return std::string(json);
 }
 
+std::string format_payload_condensacao(const std::string& dataHora, float pressaoAtual, int regimeId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"pressaoAtual\": %f,\n\"regimeId\": %d\n}", dataHora.c_str(), pressaoAtual, regimeId);
+    return std::string(json);
+}
+
 std::string format_payload_energia(bool ligado, const std::string& dataHora, float demandaAtiva, float demandaReativa, float fatorPotencia, float consumoAtivoTotal, float consumoReativoTotal, float consumoAtivoForaDePontaIndutivo, float consumoAtivoForaDePontaCapacitivo, float consumoAtivoPonta, int periodoMedicao, int unidadeId) {
     char json[512];
     snprintf(json, sizeof(json), "{\n\"ligado\": %s,\n\"dataHora\": \"%s\", \n\"demandaAtiva\": %f,\n\"demandaReativa\": %f,\n\"fatorPotencia\": %f,\n\"consumoAtivoTotal\": %f,\n\"consumoReativoTotal\": %f,\n\"consumoAtivoForaDePontaIndutivo\": %f,\n\"consumoAtivoForaDePontaCapacitivo\": %f,\n\"consumoAtivoPonta\": %f,\n\"periodoMedicao\": %d,\n\"unidadeId\": %d\n}",
@@ -55,6 +61,9 @@ std::string format_payload_energia(bool ligado, const std::string& dataHora, flo
     return std::string(json);
 }
 
-
-
-
+std::string format_payload_linha_liquido(const std::string& dataHora, float temperatura, int unidadeId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"temperatura\": %f,\n\"unidadeId\": %d\n}",
+             dataHora.c_str(), temperatura, unidadeId);
+    return std::string(json);
+}

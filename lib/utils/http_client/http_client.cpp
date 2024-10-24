@@ -7,6 +7,7 @@ static EventGroupHandle_t auth_event_group;
 static SemaphoreHandle_t xMutex;
 #define AUTHENTICATED_BIT BIT1
 
+static const char *TAG = "HTTP_CLIENT";
 static const char *backend_url = CREDENTIALS_BACKEND_URL;
 extern const uint8_t ClientCert_pem_start[] asm("_binary_lib_utils_http_client_certs_ClientCert_pem_start");
 extern const uint8_t ClientCert_pem_end[] asm("_binary_lib_utils_http_client_certs_ClientCert_pem_end"); 
@@ -20,14 +21,14 @@ bool retry_post = false;
 void initialize_auth_event_group() {
     auth_event_group = xEventGroupCreate();
     if (auth_event_group == NULL) {
-        printf("[HTTP_CLIENT] Failed to create event group.\n");
+        printf("[%s] Failed to create event group.\n", TAG);
     }
 }
 
 void initialize_post_mutex() {
     xMutex = xSemaphoreCreateMutex();
     if (xMutex == NULL) {
-        printf("Mutex creation failed!\n");
+        printf("[%s] Mutex creation failed!\n", TAG);
         // Handle error here
     }
 }
@@ -35,24 +36,26 @@ void initialize_post_mutex() {
 void get_response_token(const char *response) {
     cJSON *root = cJSON_Parse(response);
     if (root == NULL) {
-        printf("Response was not valid JSON.\n");
+        printf("%s Response was not valid JSON.\n", TAG);
         return;
     }
     cJSON *token_json = cJSON_GetObjectItem(root, "token");
     if (token_json == NULL || !cJSON_IsString(token_json)) {
-        printf("Response does not contain token.\n");
+        printf("[%s] Response does not contain token.\n", TAG);
         cJSON_Delete(root);
         return;
     }
     strncpy(bearerToken, token_json->valuestring, sizeof(bearerToken) - 1);
     bearerToken[sizeof(bearerToken) - 1] = '\0';
     xEventGroupSetBits(auth_event_group, AUTHENTICATED_BIT);
-    printf("NEW TOKEN: %s\n", bearerToken);
+    #if DEBUG_TERMINAL
+        printf("[%s] NEW TOKEN: %s\n", TAG, bearerToken);
+    #endif
     cJSON_Delete(root);
 
     if (retry_post) {
         retry_post = false;
-        printf("Retrying last post with new token...\n");
+        printf("[%s] Retrying last post with new token...\n", TAG);
         xTaskCreate(retry_post_task, "retry_post_task", 8192, NULL, 1, NULL);
     }
 }
@@ -83,19 +86,22 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt) {
     switch (evt->event_id) {
         case HTTP_EVENT_ON_DATA:
             snprintf(response_buffer, sizeof(response_buffer), "%.*s", evt->data_len, (char *)evt->data);
-            printf("RESPONSE: %s\n", response_buffer);
+            #if DEBUG_TERMINAL
+                printf("[%s] RESPONSE: %s\n", TAG, response_buffer);
+            #endif
+            
             break;
 
         case HTTP_EVENT_DISCONNECTED:
             http_status = esp_http_client_get_status_code(evt->client);
             if (http_status == 401) {
-                printf("HTTP STATUS CODE: [%d] - UNAUTHORIZED\n", http_status);
+                printf("[%s] HTTP STATUS CODE: [%d] - UNAUTHORIZED\n", TAG, http_status);
                 retry_post = true;
                 xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
             } else if (http_status == 200 || http_status == 201) {
-                printf("HTTP STATUS CODE: [%d] - OK\n", http_status);
+                printf("[%s] HTTP STATUS CODE: [%d] - OK\n", TAG, http_status);
             } else {
-                printf("HTTP STATUS CODE: [%d] - FAILED\n", http_status);
+                printf("[%s] HTTP STATUS CODE: [%d] - FAILED\n", TAG, http_status);
             }
             break;
 
@@ -111,7 +117,9 @@ void client_post_auth_login(void *param) {
     char url[strlen(backend_url) + strlen(path) + 1];
     strcpy(url, backend_url);
     strcat(url, path);
-    printf("SET ENDPOINT: %s \n", url);
+    #if DEBUG_TERMINAL
+        printf("SET ENDPOINT: %s \n", url);
+    #endif
 
     esp_http_client_config_t config_post = {};
     config_post.url = url;
@@ -121,7 +129,7 @@ void client_post_auth_login(void *param) {
     config_post.buffer_size = 4096;
     
     if (strncmp(url, "https", 5) == 0) {
-        printf("Using SSL\n");
+        printf("[%s] Using SSL.\n", TAG);
         config_post.cert_pem = (const char *)ClientCert_pem_start;
         config_post.transport_type = HTTP_TRANSPORT_OVER_SSL;
     } else {
@@ -133,7 +141,7 @@ void client_post_auth_login(void *param) {
 
     std::string payload = format_payload_login(CREDENTIALS_LOGIN_USERNAME, CREDENTIALS_LOGIN_PASSWORD);
     esp_http_client_set_post_field(client, payload.c_str(), payload.length());
-      esp_http_client_set_header(client, "Content-Type", "application/json");
+    esp_http_client_set_header(client, "Content-Type", "application/json");
     esp_http_client_perform(client);
     esp_http_client_cleanup(client);
 
@@ -147,7 +155,9 @@ void client_post_function(const char* payload, const char* post_path) {
     char url[strlen(backend_url) + strlen(post_path) + 1];
     strcpy(url, backend_url);
     strcat(url, post_path);
-    printf("SENDING DATA TO ENDPOINT: %s \n", url);
+    #if DEBUG_TERMINAL
+        printf("SENDING DATA TO ENDPOINT: %s \n", url);
+    #endif
 
     // Configuração do cliente HTTP
     esp_http_client_config_t config_post = {};
@@ -158,17 +168,17 @@ void client_post_function(const char* payload, const char* post_path) {
     config_post.buffer_size = 4096;
 
     if (strncmp(url, "https", 5) == 0) {
-        printf("Using SSL\n");
+        printf("[%s] Using SSL\n", TAG);
         config_post.cert_pem = (const char *)ClientCert_pem_start;
         config_post.transport_type = HTTP_TRANSPORT_OVER_SSL;
     } else {
-        printf("Not using SSL\n");
+        printf("[%s] Not using SSL\n", TAG);
         config_post.cert_pem = NULL;
     }
     config_post.event_handler = client_event_post_handler;
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
     if (client == NULL) {
-        printf("Failed to initialize HTTP client\n");
+        printf("[%s] Failed to initialize HTTP client\n", TAG);
         return;
     }
 
@@ -177,9 +187,11 @@ void client_post_function(const char* payload, const char* post_path) {
     size_t headerSize = sizeof(auth_header);
     strlcat(auth_header, "bearer ", headerSize);
     strlcat(auth_header, bearerToken, headerSize);
-    printf("Authorization -> %s \n", auth_header);
+     #if DEBUG_TERMINAL
+        printf("Authorization -> %s \n", auth_header);
+        printf("PAYLOAD TO SEND:\n %s \n", payload);
+    #endif
 
-    printf("PAYLOAD TO SEND:\n %s \n", payload);
 
     esp_http_client_set_post_field(client, payload, strlen(payload));
     esp_http_client_set_header(client, "Authorization", auth_header);
@@ -191,34 +203,31 @@ void client_post_function(const char* payload, const char* post_path) {
 void authenticated_post_task(const char* payload, const char* postPath) {
     // Take the mutex before proceeding
     if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
-        printf("WAITING FOR AUTHENTICATION...\n");
+        printf("[%s] WAITING FOR AUTHENTICATION...\n", TAG);
 
         const TickType_t xDelay = pdMS_TO_TICKS(10000); // Wait for 10 seconds
         EventBits_t uxBits = xEventGroupWaitBits(auth_event_group, AUTHENTICATED_BIT, pdFALSE, pdTRUE, xDelay);
 
         if (uxBits & AUTHENTICATED_BIT) {
-            printf("AUTHENTICATION SUCCESSFUL...\n");
+            printf("[%s] AUTHENTICATION SUCCESSFUL...\n", TAG);
             client_post_function(payload, postPath);
         } else {
-            printf("AUTHENTICATION FAILED, RETRYING...\n");
+            printf("[%s] AUTHENTICATION FAILED, RETRYING...\n", TAG);
             xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
 
             const TickType_t retryDelay = pdMS_TO_TICKS(5000); // Retry after 5 seconds
             uxBits = xEventGroupWaitBits(auth_event_group, AUTHENTICATED_BIT, pdFALSE, pdTRUE, retryDelay);
 
             if (uxBits & AUTHENTICATED_BIT) {
-                printf("RETRY AUTHENTICATION SUCCESSFUL, SENDING DATA...\n");
+                printf("[%s] RETRY AUTHENTICATION SUCCESSFUL, SENDING DATA...\n", TAG);
                 client_post_function(payload, postPath);
             } else {
-                printf("RETRY AUTHENTICATION FAILED, ABORTING...\n");
+                printf("[%s] RETRY AUTHENTICATION FAILED, ABORTING...\n", TAG);
             }
         }
-
         // Release the mutex after the task is done
         xSemaphoreGive(xMutex);
     }
-
-    vTaskDelete(NULL);
 }
 
 void post_condensador_task(void* pvParameters) {

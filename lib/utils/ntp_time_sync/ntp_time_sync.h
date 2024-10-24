@@ -5,6 +5,8 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <esp_sntp.h>
+#include <string.h>
+#include "../../../src/Credentials.h"
 
 /**
  * @brief Obtém o tempo atual em formato de string.
