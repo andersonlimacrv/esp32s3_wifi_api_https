@@ -4,7 +4,7 @@
 void post_condensador_mock_task(void* pvParameters) {
    
     TickType_t last_wake_time_post = xTaskGetTickCount();
-    const TickType_t interval_post = pdMS_TO_TICKS(60000); // Post each 20 seconds
+    const TickType_t interval_post = pdMS_TO_TICKS(120000); // Post each 20 seconds
 
     for (;;) {
             char time_buffer[64];
@@ -48,7 +48,7 @@ void post_condensador_mock_task(void* pvParameters) {
                 std::strcpy(payload_copy, payload.c_str());
 
             if (wifiManager.isConnected()) {
-                xTaskCreate(post_condensador_task, "post_condensador_task", 8192, (void*)payload_copy, 1, NULL);
+                xTaskCreate(post_condensador_task, "post_condensador_task", 120000, (void*)payload_copy, 1, NULL);
             } else {
                 printf("[HTTP_CLIENT] Client Wi-Fi Not Connected.\n");
             }

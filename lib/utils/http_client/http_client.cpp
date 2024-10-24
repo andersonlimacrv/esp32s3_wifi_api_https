@@ -233,39 +233,47 @@ void authenticated_post_task(const char* payload, const char* postPath) {
 void post_condensador_task(void* pvParameters) {
     printf("POST CONDENSADOR TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_condensador);
+    vTaskDelete(NULL);
 }
 
 void post_bomba_task(void* pvParameters) {
     printf("POST BOMBA TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_bomba_condensador);
+    vTaskDelete(NULL);
 }
 
 void post_ventilador_task(void* pvParameters) {
     printf("POST VENTILADOR TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_ventilador_condensador);
+    vTaskDelete(NULL);
 }
 
 void post_ambiente_task(void* pvParameters) {
     printf("POST AMBIENTE TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_ambiente);
+    vTaskDelete(NULL);
 }
 
 void post_compressor_task(void* pvParameters) {
     printf("POST COMPRESSOR TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_compressor);
+    vTaskDelete(NULL);
 }
 
 void post_regime_task(void* pvParameters) {
     printf("POST REGIME TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_regime);
+    vTaskDelete(NULL);
 }
 
 void post_regime_condensacao_task(void* pvParameters) {
     printf("POST REGIME CONDENSACAO TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_regime_condensacao);
+    vTaskDelete(NULL);
 }
 
 void post_energia_task(void* pvParameters) {
     printf("POST ENERGIA TASK CREATED.\n");
     authenticated_post_task((const char*)pvParameters, paths.post_energia);
+    vTaskDelete(NULL);
 }
