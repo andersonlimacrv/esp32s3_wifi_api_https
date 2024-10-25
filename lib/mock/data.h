@@ -1,14 +1,14 @@
 #ifndef DATA_H
 #define DATA_H
 
-#include "../../payload_formatter/payload_formatter.h"
-#include "../../ntp_time_sync/ntp_time_sync.h"
-#include "../../../classes/wifi_manager/wifi_manager.h"
-#include "../http_client.h"
+#include "../utils/payload_formatter/payload_formatter.h"
+#include "../utils//ntp_time_sync/ntp_time_sync.h"
+#include "../classes/wifi_manager/wifi_manager.h"
+#include "../utils/http_client/http_client.h"
 #include <freertos/queue.h>
 #include <random>
 #include <cstring>
-#include "../../../../src/Credentials.h" 
+#include "../../src/Credentials.h" 
 
 extern QueueHandle_t postQueueAmbientes;
 extern QueueHandle_t postQueueVentiladores;
