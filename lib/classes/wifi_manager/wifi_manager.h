@@ -10,6 +10,7 @@
 #include "../../../src/Credentials.h"
 #include "../utils/http_client/http_client.h"
 #include "../utils/ntp_time_sync/ntp_time_sync.h"
+#include "../ErrorWatcher/ErrorWatcher.h"
 #include <string.h>
 
 class WiFiManager {
@@ -23,6 +24,7 @@ private:
     void initializeWiFi();
     void connect(bool useStaticIP); 
     static void printIpInfoTask(void *pvParameter);
+    static void printWifiSignalTask(void *pvParameter);
     static void printMacAddressTask(void *pvParameter);
     static void wifiEventHandler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 

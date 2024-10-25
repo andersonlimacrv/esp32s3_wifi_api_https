@@ -9,7 +9,13 @@ std::string format_payload_login(const std::string& userName, const std::string&
 
 std::string format_payload_ambiente(const std::string& dataHora, float temperaturaAtual, int ambienteId) {
     char json[512];
-    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"temperaturaAtual\": %.f,\n\"ambienteId\": %d\n}", dataHora.c_str(), temperaturaAtual, ambienteId);
+    snprintf(json, sizeof(json), "{\n\"dataHora\": \"%s\",\n\"temperaturaAtual\": %.2f,\n\"ambienteId\": %d\n}", dataHora.c_str(), temperaturaAtual, ambienteId);
+    return std::string(json);
+}
+
+std::string format_payload_chiller(bool ligado, const std::string& dataHora, float temperaturaEntrada, int chillerId) {
+    char json[512];
+    snprintf(json, sizeof(json), "{\n\"ligado\": %s,\n\"dataHora\": \"%s\",\n\"temperaturaEntrada\": %.2f,\n\"chillerId\": %d\n}", ligado ? "true" : "false", dataHora.c_str(), temperaturaEntrada, chillerId);
     return std::string(json);
 }
 

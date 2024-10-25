@@ -12,12 +12,14 @@
 #include "freertos/event_groups.h"
 #include "../payload_formatter/payload_formatter.h"
 #include "../ntp_time_sync/ntp_time_sync.h"
+#include "../../classes/ErrorWatcher/ErrorWatcher.h"
 #include "../../../src/Credentials.h"
 #include "freertos/event_groups.h"
 
 typedef struct {
     const char * const post_login;
     const char * const post_ambiente;
+    const char * const post_chiller;
     const char * const post_condensador;
     const char * const post_bomba_condensador;
     const char * const post_ventilador_condensador;
@@ -31,6 +33,7 @@ typedef struct {
 const EndpointPaths paths = {
     .post_login = "/api/auth/login",
     .post_ambiente = "/api/leitura-ambiente",
+    .post_chiller = "/api/leitura-chiller",
     .post_condensador = "/api/leitura-condensador",
     .post_bomba_condensador = "/api/leitura-bomba",
     .post_ventilador_condensador = "/api/leitura-ventilador",
@@ -38,7 +41,7 @@ const EndpointPaths paths = {
     .post_regime = "/api/leitura-regime",
     .post_regime_condensacao = "/api/leitura-condensacao",
     .post_energia = "/api/leitura-energia",
-    .post_linha_liquido = "/api/leitura-linha-liquido"
+    .post_linha_liquido = "/api/leitura-linha-liquido",
 };
 
 extern const EndpointPaths paths;

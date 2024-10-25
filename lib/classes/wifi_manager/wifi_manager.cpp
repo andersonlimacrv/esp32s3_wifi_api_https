@@ -93,7 +93,7 @@ void WiFiManager::setTxPower() {
     
     esp_err_t ret = esp_wifi_set_max_tx_power(power);
     if (ret == ESP_OK) {
-        printf("[%s] POWER OF TRANSMISSION SET TO %d .\n", TAG, power);
+        printf("[%s] POWER OF TRANSMISSION SET TO %d\n", TAG, power);
     } else {
         printf("[%s] ERROR SETTING POWER: %s\n", esp_err_to_name(ret));  
     }
@@ -133,9 +133,7 @@ void WiFiManager::connect(bool useStaticIP) {
         esp_netif_dns_info_t dns_info;
         ip4addr_aton(STATIC_DNS, (ip4_addr_t*)&dns_info.ip.u_addr.ip4); 
         esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns_info);
-        printf("[%s] DNS CONFIGURED: " IPSTR "\n", TAG, IP2STR(&dns_info.ip.u_addr.ip4));
-            
-        
+        printf("[%s] DNS CONFIGURED: " IPSTR "\n", TAG, IP2STR(&dns_info.ip.u_addr.ip4));  
     } else {
         esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
         esp_netif_dhcpc_start(netif);
@@ -186,15 +184,18 @@ void WiFiManager::wifiEventHandler(void* event_handler_arg, esp_event_base_t eve
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
         printf("[%s] WiFi CONNECTED SUCCESSFULLY. EVENT: [%d]\n", TAG, event_id);
         xTaskCreate(WiFiManager::printMacAddressTask, "print_mac_address_task", 2048, NULL, 2, NULL);
+        xTaskCreate(WiFiManager::printWifiSignalTask, "print_wifi_signal_task", 4096, NULL, 2, NULL);
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
         disc_event = (wifi_event_sta_disconnected_t*)event_data;
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         printf("[%s] WiFi DISCONNECTED... EVENT: [%d]\n", TAG, event_id);
-
+        errorWatcher.addError(ErrorWatcher::ErrorType::WARNING);
         if (disc_event) {
             if (disc_event->reason == 15) { 
                 printf("[%s] Credentials are wrong! Check your SSID and PASSWORD.\n", TAG);
+            } else if (disc_event->reason == 21) {
+                printf("[%s] WiFi disconnected due to OUT OF RANGE! (Reason: %d)\n", TAG, disc_event->reason);
             } else {
                 printf("[%s] Disconnected for reason: %d\n", TAG, disc_event->reason);
             }
@@ -232,12 +233,13 @@ void WiFiManager::wifiEventHandler(void* event_handler_arg, esp_event_base_t eve
         break;
     case WIFI_EVENT_AP_START:
         printf("[%s] AP STARTED. EVENT: [%d] - NEED CONFIGURE MODE STA. RECONNECTING ... \n", TAG, event_id);
-        instance->connect(true);  
+        esp_wifi_connect();  
         break;
     default:
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         printf("[%s] UNKNOWN EVENT: %d\n", TAG, event_id);
-        instance->connect(true);  
+        errorWatcher.addError(ErrorWatcher::ErrorType::INFO);
+        esp_wifi_connect();  
         break;
     }
 }
@@ -251,6 +253,37 @@ void WiFiManager::printIpInfoTask(void *pvParameter) {
     printf("[%s] Gateway: " IPSTR "\n", TAG, IP2STR(&ip_info.gw));
     vTaskDelete(NULL);
 }
+
+void WiFiManager::printWifiSignalTask(void* pvParameters) {
+    printf("[%s] WiFi Signal Task started.\n", TAG);
+    wifi_ap_record_t ap_info;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t period = pdMS_TO_TICKS(WIFI_SIGNAL_CHECK_PERIOD_MS);
+
+    while (true) {
+        if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+          
+            if (ap_info.rssi >= -50) {
+                printf("[%s] WiFi Signal Strength (RSSI) %d dBm: Excellent\n", TAG, ap_info.rssi);
+            } else if (ap_info.rssi >= -60) {
+                printf("[%s] WiFi Signal Strength (RSSI) %d dBm: Good\n", TAG, ap_info.rssi);
+            } else if (ap_info.rssi >= -70) {
+                printf("[%s] WiFi Signal Strength (RSSI) %d dBm: Fair\n", TAG, ap_info.rssi);
+            } else if (ap_info.rssi >= -80) {
+                printf("[%s] WiFi Signal Strength (RSSI) %d dBm: Weak\n", TAG, ap_info.rssi);
+            } else {
+                printf("[%s] WiFi Signal Strength (RSSI) %d dBm: Very Weak, potentially unstable\n", TAG, ap_info.rssi);
+            }
+
+        } else {
+            printf("[%s] Failed to get WiFi signal strength.\n", TAG);
+        }
+
+        vTaskDelayUntil(&xLastWakeTime, period); 
+    }
+}
+
+
 
 void WiFiManager::printMacAddressTask(void *pvParameter) {
     uint8_t mac[6];

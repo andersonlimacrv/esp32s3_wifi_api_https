@@ -29,7 +29,6 @@ void initialize_post_mutex() {
     xMutex = xSemaphoreCreateMutex();
     if (xMutex == NULL) {
         printf("[%s] Mutex creation failed!\n", TAG);
-        // Handle error here
     }
 }
 
@@ -67,42 +66,21 @@ void retry_post_task(void *param) {
 
 esp_err_t client_event_auth_handler(esp_http_client_event_handle_t evt) {
     char response_buffer[4096];
+    int http_status = 0;
+
     switch (evt->event_id) {
         case HTTP_EVENT_ON_DATA:
             snprintf(response_buffer, sizeof(response_buffer), "%.*s", evt->data_len, (char *)evt->data);
             get_response_token(response_buffer);
             break;
 
-        default:
-            break;
-    }
-    return ESP_OK;
-}
-
-esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt) {
-    char response_buffer[2048];
-    int http_status = 0;
-
-    switch (evt->event_id) {
-        case HTTP_EVENT_ON_DATA:
-            snprintf(response_buffer, sizeof(response_buffer), "%.*s", evt->data_len, (char *)evt->data);
-            #if DEBUG_TERMINAL
-                printf("[%s] RESPONSE: %s\n", TAG, response_buffer);
-            #endif
-            
-            break;
-
         case HTTP_EVENT_DISCONNECTED:
             http_status = esp_http_client_get_status_code(evt->client);
-            if (http_status == 401) {
-                printf("[%s] HTTP STATUS CODE: [%d] - UNAUTHORIZED\n", TAG, http_status);
-                retry_post = true;
-                xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
-            } else if (http_status == 200 || http_status == 201) {
-                printf("[%s] HTTP STATUS CODE: [%d] - OK\n", TAG, http_status);
-            } else {
-                printf("[%s] HTTP STATUS CODE: [%d] - FAILED\n", TAG, http_status);
-            }
+            if(http_status == 0){
+                printf("[%s] CONECTION ERROR. HTTP STATUS CODE: [%d]\n", TAG, http_status);
+                errorWatcher.addError(ErrorWatcher::ErrorType::WARNING);
+            } else 
+                printf("[%s] HTTP STATUS CODE: [%d]\n", TAG, http_status);
             break;
 
         default:
@@ -117,6 +95,7 @@ void client_post_auth_login(void *param) {
     char url[strlen(backend_url) + strlen(path) + 1];
     strcpy(url, backend_url);
     strcat(url, path);
+    
     #if DEBUG_TERMINAL
         printf("SET ENDPOINT: %s \n", url);
     #endif
@@ -127,7 +106,7 @@ void client_post_auth_login(void *param) {
     config_post.timeout_ms = 9000;
     config_post.buffer_size_tx = 4096;
     config_post.buffer_size = 4096;
-    
+
     if (strncmp(url, "https", 5) == 0) {
         printf("[%s] Using SSL.\n", TAG);
         config_post.cert_pem = (const char *)ClientCert_pem_start;
@@ -136,17 +115,60 @@ void client_post_auth_login(void *param) {
         printf("Not using SSL\n");
         config_post.cert_pem = NULL;
     }
+    
     config_post.event_handler = client_event_auth_handler;
+    
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
-
+    
     std::string payload = format_payload_login(CREDENTIALS_LOGIN_USERNAME, CREDENTIALS_LOGIN_PASSWORD);
     esp_http_client_set_post_field(client, payload.c_str(), payload.length());
     esp_http_client_set_header(client, "Content-Type", "application/json");
-    esp_http_client_perform(client);
-    esp_http_client_cleanup(client);
 
+    esp_err_t err = esp_http_client_perform(client);
+    if (err != ESP_OK) printf("[%s] Failed to perform HTTP request: %s\n", TAG, esp_err_to_name(err));
+    esp_http_client_cleanup(client);
     vTaskDelete(NULL);
 }
+
+
+esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt) {
+    char response_buffer[2048];
+    int http_status = 0;
+
+    switch (evt->event_id) {
+        case HTTP_EVENT_ON_DATA:
+            snprintf(response_buffer, sizeof(response_buffer), "%.*s", evt->data_len, (char *)evt->data);
+            #if DEBUG_TERMINAL
+                printf("[%s] RESPONSE: %s\n", TAG, response_buffer);
+            #endif
+            break;
+
+        case HTTP_EVENT_DISCONNECTED:
+            http_status = esp_http_client_get_status_code(evt->client);
+            
+            if (http_status == 401) {
+                printf("[%s] HTTP STATUS CODE: [%d] - UNAUTHORIZED\n", TAG, http_status);
+                retry_post = true;
+                xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
+            } else if (http_status == 200 || http_status == 201) {
+                printf("[%s] HTTP STATUS CODE: [%d] - OK\n", TAG, http_status);
+            } else if (http_status == 0) {
+                printf("[%s] HTTP STATUS CODE: [%d] - CONNECTION ERROR\n", TAG, http_status);
+                errorWatcher.addError(ErrorWatcher::ErrorType::WARNING);
+            } else {
+                printf("[%s] HTTP STATUS CODE: [%d] - FAILED\n", TAG, http_status);
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    return ESP_OK;
+}
+
+
+
 
 void client_post_function(const char* payload, const char* post_path) {
     strncpy(last_payload, payload, sizeof(last_payload) - 1);
@@ -159,7 +181,6 @@ void client_post_function(const char* payload, const char* post_path) {
         printf("SENDING DATA TO ENDPOINT: %s \n", url);
     #endif
 
-    // Configuração do cliente HTTP
     esp_http_client_config_t config_post = {};
     config_post.url = url;
     config_post.method = HTTP_METHOD_POST;
@@ -196,7 +217,9 @@ void client_post_function(const char* payload, const char* post_path) {
     esp_http_client_set_post_field(client, payload, strlen(payload));
     esp_http_client_set_header(client, "Authorization", auth_header);
     esp_http_client_set_header(client, "Content-Type", "application/json");
-    esp_http_client_perform(client);
+
+    esp_err_t err = esp_http_client_perform(client);
+    if (err != ESP_OK) printf("[%s] Failed to perform HTTP request: %s\n", TAG, esp_err_to_name(err));
     esp_http_client_cleanup(client);
 }
 

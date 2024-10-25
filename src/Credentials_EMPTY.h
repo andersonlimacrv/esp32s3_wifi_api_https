@@ -5,12 +5,15 @@
 
 #define USE_EXTERNAL_BACKEND 0 /* 0 = LOCAL, 1 = EXTERNAL CLOUD SGEM API */
 #define DEBUG_TERMINAL 0 /* 0 = NOT PRINT ON TERMINAL, 1 = PRINT ON TERMINAL */
+#define WIFI_SIGNAL_CHECK_PERIOD_MS 30000 // 30 seconds - Check the WiFi signal strength every 30 seconds
 
+/* ERROR LIMITS */
+static const int CREDENTIALS_CRITICAL_ERROR_LIMIT = 1;
+static const int CREDENTIALS_WARNING_ERROR_LIMIT = 5;
+static const int CREDENTIALS_INFO_ERROR_LIMIT = 10;
+/* WIFI */
 static const char * const CREDENTIALS_SSID = ""; /* WIFI SSID */
 static const char * const CREDENTIALS_PASSWORD = ""; /* WIFI PASSWORD */
-static const char * const CREDENTIALS_LOGIN_USERNAME = ""; /* USERNAME FROM SGEM USER TO POST */
-static const char * const CREDENTIALS_LOGIN_PASSWORD = ""; /* PASSWORD FROM SGEM USER TO POST*/
-
 /* VARIABLES WHEN IP IS STATIC */
 static const char * const CREDENTIALS_WIFI_IP = ""; 
 static const char * const CREDENTIALS_NETMASK = "";
@@ -18,6 +21,9 @@ static const char * const CREDENTIALS_GATEWAY = "";
 static const char * const CREDENTIALS_DNS = "";
 static const char * const CREDENTIALS_DNS_SECOND = "";
 static const char * const CREDENTIALS_NTP_SERVER = "pool.ntp.org";
+/* SGEM */
+static const char * const CREDENTIALS_LOGIN_USERNAME = ""; /* USERNAME FROM SGEM USER TO POST */
+static const char * const CREDENTIALS_LOGIN_PASSWORD = ""; /* PASSWORD FROM SGEM USER TO POST*/
 
 // Function to initialize the equipment IDs inline, example with IDs
 inline void initializeEquipmentIds() {

@@ -21,9 +21,8 @@ void setup() {
     esp_log_level_set("*", ESP_LOG_DEBUG);
     
     Serial.begin(115200);
-    
+    vTaskDelay(2000);
     wifiManager.startConnection(CREDENTIALS_SSID,CREDENTIALS_PASSWORD, true);
-
     if (wifiManager.isConnected()) {
         //createQueue(&postQueueAmbientes, "postQueueAmbientes", 50, sizeof(char*));
         //createQueue(&postQueueVentiladores, "postQueueVentiladores", 12, sizeof(char*));
