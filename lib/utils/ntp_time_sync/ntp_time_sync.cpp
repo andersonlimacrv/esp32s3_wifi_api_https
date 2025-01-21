@@ -14,8 +14,11 @@ void get_time_now(char *time_buffer, size_t buffer_size) {
     time(&now);
     struct tm *timeinfo = localtime(&now);
     strftime(time_buffer, buffer_size, "%Y-%m-%dT%H:%M:%S.000Z", timeinfo);
+
+    int current_year = timeinfo->tm_year + 1900; 
     int min_year = 2024;
-    if (strncmp(time_buffer, "2024", 4) == 0) return;
+    
+    if (current_year >= min_year) return;
      else {
         snprintf(time_buffer, buffer_size, "DATE INVALID, MIN YEAR: %d", min_year);
         printf("[%s] DATE INVALID: %s\n", TAG, time_buffer);

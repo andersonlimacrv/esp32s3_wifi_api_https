@@ -6,15 +6,18 @@
 #define USE_EXTERNAL_BACKEND 0 /* 0 = LOCAL, 1 = EXTERNAL CLOUD SGEM API */
 #define DEBUG_TERMINAL 0 /* 0 = NOT PRINT ON TERMINAL, 1 = PRINT ON TERMINAL */
 #define WIFI_SIGNAL_CHECK_PERIOD_MS 30000 // 30 seconds - Check the WiFi signal strength every 30 seconds
+#define USE_AUTH_URL_ENCODED 0 // 0 = json format to login, 1 = url encoded 
 
 /* ERROR LIMITS */
 static const int CREDENTIALS_CRITICAL_ERROR_LIMIT = 1;
 static const int CREDENTIALS_WARNING_ERROR_LIMIT = 5;
 static const int CREDENTIALS_INFO_ERROR_LIMIT = 10;
+static const int CREDENTIALS_SUCESS_HIT = 2;
 /* WIFI */
 static const char * const CREDENTIALS_SSID = ""; /* WIFI SSID */
 static const char * const CREDENTIALS_PASSWORD = ""; /* WIFI PASSWORD */
 /* VARIABLES WHEN IP IS STATIC */
+#define USE_STATIC_IP 0 /* 0 = NOT STATIC, 1 = STATIC */
 static const char * const CREDENTIALS_WIFI_IP = ""; 
 static const char * const CREDENTIALS_NETMASK = "";
 static const char * const CREDENTIALS_GATEWAY = ""; 
@@ -33,10 +36,10 @@ inline void initializeEquipmentIds() {
     eq.condensacaoId = 0;
     eq.ambienteIds = {0};
     eq.chillerIds = {0};
-    eq.compressorIds = {1,2,3}; 
-    eq.bombaIds = {1, 2, 0, 0, 0, 0, 0, 0, 0, 0};       // Aways 10 positions - if not active = 0
-    eq.ventiladorIds = {1, 2, 0, 0, 0, 0, 0, 0, 0, 0};  // Aways 10 positions - if not active = 0
-    eq.regimeIds = {1, 0, 0, 4, 5, 0, 0, 0, 0, 0};      // Aways 10 positions - if not active = 0
+    eq.compressorIds = {0}; 
+    eq.bombaIds = {0, 2, 0, 0, 0, 0, 0, 0, 0, 0};       // Aways 10 positions - if not active = 0
+    eq.ventiladorIds = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};  // Aways 10 positions - if not active = 0
+    eq.regimeIds = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};      // Aways 10 positions - if not active = 0
 }
 
 // Definition of the backend URL

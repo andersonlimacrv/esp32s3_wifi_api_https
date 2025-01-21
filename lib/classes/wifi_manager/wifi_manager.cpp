@@ -38,7 +38,7 @@ WiFiManager::WiFiManager() {
 }
 
 
-void WiFiManager::startConnection(const char* ssid, const char* pass, bool useStaticIP) {
+void WiFiManager::startConnection(const char* ssid, const char* pass, bool useStaticIP, bool scanBestAPSignal) {
     printf("[%s] Starting Wi-Fi connection with SSID: %s\n",TAG, ssid);
     this->ssid = ssid;
     this->pass = pass;
@@ -88,12 +88,10 @@ void WiFiManager::initializeWiFi() {
     esp_wifi_init(&wifi_initiation);
 }
 
-void WiFiManager::setTxPower() {
-    int8_t power = 74; 
-    
-    esp_err_t ret = esp_wifi_set_max_tx_power(power);
+void WiFiManager::setTxPower() { 
+    esp_err_t ret = esp_wifi_set_max_tx_power(TX_POWER);
     if (ret == ESP_OK) {
-        printf("[%s] POWER OF TRANSMISSION SET TO %d\n", TAG, power);
+        printf("[%s] POWER OF TRANSMISSION SET TO %d .\n", TAG, TX_POWER);
     } else {
         printf("[%s] ERROR SETTING POWER: %s\n", esp_err_to_name(ret));  
     }
@@ -133,7 +131,8 @@ void WiFiManager::connect(bool useStaticIP) {
         esp_netif_dns_info_t dns_info;
         ip4addr_aton(STATIC_DNS, (ip4_addr_t*)&dns_info.ip.u_addr.ip4); 
         esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns_info);
-        printf("[%s] DNS CONFIGURED: " IPSTR "\n", TAG, IP2STR(&dns_info.ip.u_addr.ip4));  
+        printf("[%s] DNS CONFIGURED: " IPSTR "\n", TAG, IP2STR(&dns_info.ip.u_addr.ip4));
+        
     } else {
         esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
         esp_netif_dhcpc_start(netif);
@@ -164,7 +163,11 @@ void WiFiManager::connect(bool useStaticIP) {
         printf("[%s] Connected to Wi-Fi. WIFI_CONNECTED_BIT: %x\n", TAG, uxBits);
         xTaskCreate(ntp_time_sync_task, "ntp_time_sync_task", 2048, NULL, 1, NULL);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-        xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
+        #if USE_AUTH_URL_ENCODED
+            xTaskCreate(client_post_auth_login_url_encoded, "client_post_auth_login_url_encoded", 8192, NULL, 1, NULL);
+        #else
+            xTaskCreate(client_post_auth_login_json, "client_post_auth_login_json", 8192, NULL, 1, NULL);
+        #endif
     } else {
         printf("[%s] Failed to connect to Wi-Fi.\n", TAG);
     }
@@ -190,7 +193,7 @@ void WiFiManager::wifiEventHandler(void* event_handler_arg, esp_event_base_t eve
         disc_event = (wifi_event_sta_disconnected_t*)event_data;
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         printf("[%s] WiFi DISCONNECTED... EVENT: [%d]\n", TAG, event_id);
-        errorWatcher.addError(ErrorWatcher::ErrorType::WARNING);
+        errorWatcher.addEvent(ErrorWatcher::EventType::ERR_WARNING);
         if (disc_event) {
             if (disc_event->reason == 15) { 
                 printf("[%s] Credentials are wrong! Check your SSID and PASSWORD.\n", TAG);
@@ -238,12 +241,11 @@ void WiFiManager::wifiEventHandler(void* event_handler_arg, esp_event_base_t eve
     default:
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         printf("[%s] UNKNOWN EVENT: %d\n", TAG, event_id);
-        errorWatcher.addError(ErrorWatcher::ErrorType::INFO);
+        errorWatcher.addEvent(ErrorWatcher::EventType::ERR_INFO);
         esp_wifi_connect();  
         break;
     }
 }
-
 
 void WiFiManager::printIpInfoTask(void *pvParameter) {
     esp_netif_ip_info_t ip_info;
@@ -282,8 +284,6 @@ void WiFiManager::printWifiSignalTask(void* pvParameters) {
         vTaskDelayUntil(&xLastWakeTime, period); 
     }
 }
-
-
 
 void WiFiManager::printMacAddressTask(void *pvParameter) {
     uint8_t mac[6];

@@ -32,24 +32,46 @@ void initialize_post_mutex() {
     }
 }
 
+cJSON *get_json_item_by_keys(cJSON *root, const char **keys, size_t key_count) {
+    for (size_t i = 0; i < key_count; i++) {
+        cJSON *item = cJSON_GetObjectItem(root, keys[i]);
+        if (item != NULL && cJSON_IsString(item)) {
+            return item;
+        }
+    }
+    return NULL;
+}
+
 void get_response_token(const char *response) {
     cJSON *root = cJSON_Parse(response);
     if (root == NULL) {
         printf("%s Response was not valid JSON.\n", TAG);
         return;
     }
-    cJSON *token_json = cJSON_GetObjectItem(root, "token");
-    if (token_json == NULL || !cJSON_IsString(token_json)) {
+
+    #if DEBUG_TERMINAL
+        char *print = cJSON_Print(root);
+        printf("%s Response: %s\n", TAG, print);
+        free(print);
+    #endif
+
+    const char *token_keys[] = { "token", "access_token" };
+    cJSON *token_json = get_json_item_by_keys(root, token_keys, sizeof(token_keys) / sizeof(token_keys[0]));
+
+    if (token_json == NULL) {
         printf("[%s] Response does not contain token.\n", TAG);
         cJSON_Delete(root);
         return;
     }
+
     strncpy(bearerToken, token_json->valuestring, sizeof(bearerToken) - 1);
     bearerToken[sizeof(bearerToken) - 1] = '\0';
     xEventGroupSetBits(auth_event_group, AUTHENTICATED_BIT);
+
     #if DEBUG_TERMINAL
         printf("[%s] NEW TOKEN: %s\n", TAG, bearerToken);
     #endif
+
     cJSON_Delete(root);
 
     if (retry_post) {
@@ -78,7 +100,7 @@ esp_err_t client_event_auth_handler(esp_http_client_event_handle_t evt) {
             http_status = esp_http_client_get_status_code(evt->client);
             if(http_status == 0){
                 printf("[%s] CONECTION ERROR. HTTP STATUS CODE: [%d]\n", TAG, http_status);
-                errorWatcher.addError(ErrorWatcher::ErrorType::WARNING);
+                errorWatcher.addEvent(ErrorWatcher::EventType::ERR_WARNING);
             } else 
                 printf("[%s] HTTP STATUS CODE: [%d]\n", TAG, http_status);
             break;
@@ -90,7 +112,7 @@ esp_err_t client_event_auth_handler(esp_http_client_event_handle_t evt) {
     return ESP_OK;
 }
 
-void client_post_auth_login(void *param) {
+void client_post_auth_login_json(void *param) {
     const char *path = paths.post_login;
     char url[strlen(backend_url) + strlen(path) + 1];
     strcpy(url, backend_url);
@@ -122,8 +144,57 @@ void client_post_auth_login(void *param) {
     
     std::string payload = format_payload_login(CREDENTIALS_LOGIN_USERNAME, CREDENTIALS_LOGIN_PASSWORD);
     esp_http_client_set_post_field(client, payload.c_str(), payload.length());
+    #if DEBUG_TERMINAL
+        printf("[%s] PAYLOAD for LOGIN: %s\n", TAG, payload.c_str());
+    #endif
     esp_http_client_set_header(client, "Content-Type", "application/json");
 
+    esp_err_t err = esp_http_client_perform(client);
+    if (err != ESP_OK) printf("[%s] Failed to perform HTTP request: %s\n", TAG, esp_err_to_name(err));
+    esp_http_client_cleanup(client);
+    vTaskDelete(NULL);
+}
+
+void client_post_auth_login_url_encoded(void *param) {
+    const char *path = paths.post_login_url_encoded;
+    char url[strlen(backend_url) + strlen(path) + 1];
+    strcpy(url, backend_url);
+    strcat(url, path);
+    
+    #if DEBUG_TERMINAL
+        printf("SET ENDPOINT: %s \n", url);
+    #endif
+
+    esp_http_client_config_t config_post = {};
+    config_post.url = url;
+    config_post.method = HTTP_METHOD_POST;
+    config_post.timeout_ms = 9000;
+    config_post.buffer_size_tx = 4096;
+    config_post.buffer_size = 4096;
+
+    if (strncmp(url, "https", 5) == 0) {
+        printf("[%s] Using SSL.\n", TAG);
+        config_post.cert_pem = (const char *)ClientCert_pem_start;
+        config_post.transport_type = HTTP_TRANSPORT_OVER_SSL;
+    } else {
+        printf("Not using SSL\n");
+        config_post.cert_pem = NULL;
+    }
+    
+    config_post.event_handler = client_event_auth_handler;
+    
+    esp_http_client_handle_t client = esp_http_client_init(&config_post);
+
+    std::string payload = "username=" + std::string(CREDENTIALS_LOGIN_USERNAME) +
+                          "&password=" + std::string(CREDENTIALS_LOGIN_PASSWORD);
+
+    // Define o corpo da requisição
+    esp_http_client_set_post_field(client, payload.c_str(), payload.length());
+    #if DEBUG_TERMINAL
+        printf("[%s] PAYLOAD for LOGIN (x-www-form-urlencoded): %s\n", TAG, payload.c_str());
+    #endif
+
+    esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
     esp_err_t err = esp_http_client_perform(client);
     if (err != ESP_OK) printf("[%s] Failed to perform HTTP request: %s\n", TAG, esp_err_to_name(err));
     esp_http_client_cleanup(client);
@@ -149,12 +220,17 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt) {
             if (http_status == 401) {
                 printf("[%s] HTTP STATUS CODE: [%d] - UNAUTHORIZED\n", TAG, http_status);
                 retry_post = true;
-                xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
+                #if USE_AUTH_URL_ENCODED
+                    xTaskCreate(client_post_auth_login_url_encoded, "client_post_auth_login_url_encoded", 8192, NULL, 1, NULL);
+                #else
+                    xTaskCreate(client_post_auth_login_json, "client_post_auth_login_json", 8192, NULL, 1, NULL);
+                #endif
             } else if (http_status == 200 || http_status == 201) {
                 printf("[%s] HTTP STATUS CODE: [%d] - OK\n", TAG, http_status);
+                errorWatcher.addEvent(ErrorWatcher::EventType::SUCESS);
             } else if (http_status == 0) {
                 printf("[%s] HTTP STATUS CODE: [%d] - CONNECTION ERROR\n", TAG, http_status);
-                errorWatcher.addError(ErrorWatcher::ErrorType::WARNING);
+                errorWatcher.addEvent(ErrorWatcher::EventType::ERR_WARNING);
             } else {
                 printf("[%s] HTTP STATUS CODE: [%d] - FAILED\n", TAG, http_status);
             }
@@ -236,7 +312,11 @@ void authenticated_post_task(const char* payload, const char* postPath) {
             client_post_function(payload, postPath);
         } else {
             printf("[%s] AUTHENTICATION FAILED, RETRYING...\n", TAG);
-            xTaskCreate(client_post_auth_login, "client_post_auth_login", 8192, NULL, 1, NULL);
+            #if USE_AUTH_URL_ENCODED
+                xTaskCreate(client_post_auth_login_url_encoded, "client_post_auth_login_url_encoded", 8192, NULL, 1, NULL);
+            #else
+                xTaskCreate(client_post_auth_login_json, "client_post_auth_login_json", 8192, NULL, 1, NULL);
+            #endif
 
             const TickType_t retryDelay = pdMS_TO_TICKS(5000); // Retry after 5 seconds
             uxBits = xEventGroupWaitBits(auth_event_group, AUTHENTICATED_BIT, pdFALSE, pdTRUE, retryDelay);

@@ -7,31 +7,34 @@
 class ErrorWatcher {
 public:
     
-    enum ErrorType {
-        CRITICAL,
-        WARNING,
-        INFO
+    enum EventType {
+        ERR_CRITICAL,
+        ERR_WARNING,
+        ERR_INFO,
+        SUCESS
     };
 
-   
     ErrorWatcher();
-
     
-    void addError(ErrorType errorType);
-
+    void addEvent(EventType eventType);
     
     int getCriticalErrors() const;
     int getWarningErrors() const;
     int getInfoErrors() const;
+    int getSucessHit() const;
+    int clearAllErros();
 
 private:
     int criticalErrors;
     int warningErrors;
     int infoErrors;
+    int sucessHit;
 
     const int CRITICAL_ERROR_LIMIT = CREDENTIALS_CRITICAL_ERROR_LIMIT;  
     const int WARNING_ERROR_LIMIT = CREDENTIALS_WARNING_ERROR_LIMIT;  
-    const int INFO_ERROR_LIMIT = CREDENTIALS_INFO_ERROR_LIMIT;      
+    const int INFO_ERROR_LIMIT = CREDENTIALS_INFO_ERROR_LIMIT;
+    const int SUCESS_HIT_LIMIT = CREDENTIALS_SUCESS_HIT;
+      
 
     void checkRestartCondition();
 };

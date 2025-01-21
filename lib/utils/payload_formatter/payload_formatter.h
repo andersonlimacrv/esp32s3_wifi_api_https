@@ -4,7 +4,7 @@
 #include <string>
 #include <cstdio>
 
-std::string format_payload_login(const std::string& userName, const std::string& password);
+std::string format_payload_login(const std::string& username, const std::string& password);
 std::string format_payload_ambiente(const std::string& dataHora, float temperaturaAtual, int ambienteId);
 std::string format_payload_chiller(bool ligado, const std::string& dataHora, float temperaturaEntrada, int chillerId);
 std::string format_payload_bomba_condensador(bool ligado, const std::string& dataHora, float corrente, int frequencia, int bombaId);

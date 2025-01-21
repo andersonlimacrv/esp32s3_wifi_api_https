@@ -1,9 +1,9 @@
 #include "payload_formatter.h"
 
 
-std::string format_payload_login(const std::string& userName, const std::string& password) {
+std::string format_payload_login(const std::string& username, const std::string& password) {
     char json[512];
-    snprintf(json, sizeof(json), "{\n\"userName\": \"%s\",\n\"password\": \"%s\"\n}", userName.c_str(), password.c_str());
+    snprintf(json, sizeof(json), "{\n\"username\": \"%s\",\n\"password\": \"%s\"\n}", username.c_str(), password.c_str());
     return std::string(json);
 }
 
