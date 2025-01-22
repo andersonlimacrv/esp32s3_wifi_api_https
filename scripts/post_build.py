@@ -38,7 +38,7 @@ def after_build(source, target, env):
     current_time = datetime.now().strftime("%H%M")
     
     # Nome do arquivo no formato desejado
-    new_firmware_name = f"firmware_{firmware_version}__{commit_date_short}_{current_time}.bin"
+    new_firmware_name = f"{commit_date_short}_{current_time}_firmware_{firmware_version}.bin"
     new_firmware_path = os.path.join(destination_dir, new_firmware_name)
     
     # Copiar o firmware com o novo nome
