@@ -18,8 +18,11 @@ void setup() {
     initializeEquipmentIds();
     initialize_auth_event_group();
     initialize_post_mutex();
-    vTaskDelay(3000);
+    vTaskDelay(5000);
     Serial.begin(115200);
+    Serial.println("Firmware Version: " FIRMWARE_VERSION);
+    Serial.println("Commit Date: " COMMIT_DATE);
+    Serial.println("Build Date: " BUILD_DATE);
     bool useStaticIP = USE_STATIC_IP;
     bool scanBestAPSignal = true;
     wifiManager.startConnection(CREDENTIALS_SSID,CREDENTIALS_PASSWORD, useStaticIP, scanBestAPSignal);
