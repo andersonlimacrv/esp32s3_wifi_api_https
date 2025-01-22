@@ -10,7 +10,6 @@ def get_git_version():
 
 def get_git_commit_date():
     try:
-        # Pega a data do commit (último commit)
         commit_date = subprocess.check_output(["git", "log", "-1", "--format=%ci"]).strip().decode('utf-8')
         return commit_date
     except subprocess.CalledProcessError:
