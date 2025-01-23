@@ -18,9 +18,6 @@ def get_git_commit_date():
 git_version = get_git_version()
 commit_date = get_git_commit_date()
 
-current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
 with open("src/version.h", "w") as f:
     f.write(f"#define FIRMWARE_VERSION \"{git_version}\"\n")
     f.write(f"#define COMMIT_DATE \"{commit_date}\"\n")
-    f.write(f"#define BUILD_DATE \"{current_date}\"\n")
