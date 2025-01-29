@@ -22,7 +22,7 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Firmware Version: " FIRMWARE_VERSION);
     Serial.println("Commit Date: " COMMIT_DATE);
-    Serial.println("Build Date: " BUILD_DATE);
+    Serial.println("Last Commit Description: " COMMIT_MESSAGE);
     bool useStaticIP = USE_STATIC_IP;
     bool scanBestAPSignal = true;
     wifiManager.startConnection(CREDENTIALS_SSID,CREDENTIALS_PASSWORD, useStaticIP, scanBestAPSignal);
