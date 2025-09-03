@@ -110,6 +110,7 @@ void WiFiManager::connect(bool useStaticIP) {
     wifi_config_t wifi_configuration = {};
     strncpy(reinterpret_cast<char*>(wifi_configuration.sta.ssid), ssid, sizeof(wifi_configuration.sta.ssid) - 1);
     strncpy(reinterpret_cast<char*>(wifi_configuration.sta.password), pass, sizeof(wifi_configuration.sta.password) - 1);
+    /* wifi_configuration.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK; */
     esp_wifi_set_config(WIFI_IF_STA, &wifi_configuration);
 
     if (useStaticIP) {
@@ -174,12 +175,72 @@ void WiFiManager::connect(bool useStaticIP) {
 
 }
 
+const char* authModeToStr(wifi_auth_mode_t mode) {
+    switch (mode) {
+        case WIFI_AUTH_OPEN: return "OPEN";
+        case WIFI_AUTH_WEP: return "WEP";
+        case WIFI_AUTH_WPA_PSK: return "WPA-PSK";
+        case WIFI_AUTH_WPA2_PSK: return "WPA2-PSK";
+        case WIFI_AUTH_WPA_WPA2_PSK: return "WPA/WPA2-PSK";
+        case WIFI_AUTH_WPA2_ENTERPRISE: return "WPA2-ENTERPRISE";
+        case WIFI_AUTH_WPA3_PSK: return "WPA3-PSK";
+        case WIFI_AUTH_WPA2_WPA3_PSK: return "WPA2/WPA3-PSK";
+        default: return "UNKNOWN";
+    }
+}
+
+void WiFiManager::scanNetworksTask(void* pvParameter) {
+    printf("[%s] Scan Wi-Fi Task started.\n", TAG);
+
+    wifi_scan_config_t scan_config = {};
+    scan_config.show_hidden = true; 
+
+    esp_err_t ret = esp_wifi_scan_start(&scan_config, true);
+    if (ret != ESP_OK) {
+        printf("[%s] Fail to start scan: %s\n", TAG, esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+
+    uint16_t ap_count = 0;
+    if (esp_wifi_scan_get_ap_num(&ap_count) != ESP_OK || ap_count == 0) {
+        printf("[%s] None AP found.\n", TAG);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    wifi_ap_record_t* ap_records = new wifi_ap_record_t[ap_count];
+    if (!ap_records) {
+        printf("[%s] Fail to allocate memory.\n", TAG);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    if (esp_wifi_scan_get_ap_records(&ap_count, ap_records) == ESP_OK) {
+        printf("[%s] Redes Wi-Fi encontradas (%d):\n", TAG, ap_count);
+        for (uint16_t i = 0; i < ap_count; i++) {
+            printf("  SSID: %s | RSSI: %d dBm | Canal: %d | Auth: %s\n",
+                   ap_records[i].ssid,
+                   ap_records[i].rssi,
+                   ap_records[i].primary,
+                   authModeToStr(ap_records[i].authmode));
+        }
+    } else {
+        printf("[%s] Fail to get scan results.\n", TAG);
+    }
+    delete[] ap_records;
+    vTaskDelete(NULL);
+}
+
+
 void WiFiManager::wifiEventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
     WiFiManager* instance = static_cast<WiFiManager*>(event_handler_arg);
     wifi_event_sta_disconnected_t* disc_event = nullptr;
     switch (event_id) {
     case WIFI_EVENT_STA_START:
         printf("[%s] WiFi CONNECTING. EVENT: [%d]\n", TAG , event_id);
+        xTaskCreate(WiFiManager::scanNetworksTask, "scan_networks_task", 4096, NULL, 1, NULL);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         esp_wifi_connect();
         break;
